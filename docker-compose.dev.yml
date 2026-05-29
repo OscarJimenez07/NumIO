@@ -1,0 +1,58 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: numio-db-dev
+    environment:
+      POSTGRES_USER: numio
+      POSTGRES_PASSWORD: numio
+      POSTGRES_DB: numio
+    volumes:
+      - dbdata-dev:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U numio -d numio"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    image: node:20-alpine
+    container_name: numio-backend-dev
+    working_dir: /app
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://numio:numio@db:5432/numio
+      JWT_SECRET: dev-secret-change-me
+      JWT_EXPIRES_IN: 1d
+      PORT: 3000
+      NODE_ENV: development
+      SWAGGER_ENABLED: "true"
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./backend:/app
+      - backend-node-modules:/app/node_modules
+    command: sh -c "npm install && npx prisma generate && npx prisma db push --accept-data-loss && npx prisma db seed && npm run start:dev"
+
+  frontend:
+    image: node:20-alpine
+    container_name: numio-frontend-dev
+    working_dir: /app
+    depends_on:
+      - backend
+    environment:
+      VITE_API_URL: http://localhost:3000
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - frontend-node-modules:/app/node_modules
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
+
+volumes:
+  dbdata-dev:
+  backend-node-modules:
+  frontend-node-modules:

@@ -1,0 +1,54 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: numio-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-numio}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-numio}
+      POSTGRES_DB: ${POSTGRES_DB:-numio}
+    volumes:
+      - dbdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-numio} -d ${POSTGRES_DB:-numio}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: numio-backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-numio}:${POSTGRES_PASSWORD:-numio}@db:5432/${POSTGRES_DB:-numio}
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-1d}
+      PORT: 3000
+      NODE_ENV: production
+      SWAGGER_ENABLED: ${SWAGGER_ENABLED:-false}
+    ports:
+      - "3000:3000"
+    command: sh -c "npx prisma db push --accept-data-loss --skip-generate && (npx prisma db seed || echo 'seed failed, continuing') && node dist/src/main.js"
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:3000}
+    container_name: numio-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "8080:80"
+
+volumes:
+  dbdata:

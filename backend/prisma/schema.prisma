@@ -1,0 +1,88 @@
+// Prisma schema — NumIO (BAN-00311)
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  STUDENT
+  TEACHER
+  ADMIN
+}
+
+enum Category {
+  NUMERICAL
+  OPERATIONS
+}
+
+enum TestType {
+  PRE
+  POST
+}
+
+model User {
+  id           String        @id @default(cuid())
+  email        String        @unique
+  passwordHash String
+  fullName     String
+  role         Role          @default(STUDENT)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  attempts     Attempt[]
+  testResults  TestResult[]
+  susResponses SusResponse[]
+}
+
+model Method {
+  id          String    @id @default(cuid())
+  slug        String    @unique
+  name        String
+  category    Category
+  description String
+
+  attempts    Attempt[]
+}
+
+model Attempt {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  methodId  String
+  method    Method   @relation(fields: [methodId], references: [id])
+  input     Json
+  steps     Json
+  userSteps Json?
+  feedback  Json?
+  isCorrect Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId, methodId])
+}
+
+model TestResult {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  testType  TestType
+  score     Float
+  details   Json
+  createdAt DateTime @default(now())
+
+  @@index([userId, testType])
+}
+
+model SusResponse {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  answers   Json
+  score     Float
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
