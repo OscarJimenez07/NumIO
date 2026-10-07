@@ -4,6 +4,8 @@ import { SolveResult, Step } from '../shared/step.types';
 import { IntegrationInputDto } from '../dto/integration.dto';
 import { FeedbackService } from '../../feedback/feedback.service';
 import { FeedbackResult } from '../../feedback/feedback.types';
+import { num, paren, rejilla } from '../../common/texto';
+import { desgloseLatex, explicarNodo } from '../shared/integracion.texto';
 
 @Injectable()
 export class Simpson38Service {
@@ -29,7 +31,18 @@ export class Simpson38Service {
       steps.push({
         iteration: i,
         state: { i, x: round(x), y: round(y), weight },
-        explanation: `x_${i} = ${round(x)}, f(x_${i}) = ${round(y)}, peso = ${weight}.`,
+        ...explicarNodo({
+          i, n, a, b, h, x, y, f,
+          peso: {
+            valor: weight,
+            razon:
+              i === 0 || i === n
+                ? 'es un extremo'
+                : i % 3 === 0
+                  ? 'su índice es múltiplo de 3 (une dos tramos cúbicos vecinos)'
+                  : 'es un punto interior de un tramo cúbico',
+          },
+        }),
       });
     }
 
@@ -37,11 +50,21 @@ export class Simpson38Service {
     for (let i = 1; i < n; i++) sum += (i % 3 === 0 ? 2 : 3) * ys[i];
     const integral = ((3 * h) / 8) * sum;
 
+    const peso = (i: number) => (i === 0 || i === n ? 1 : i % 3 === 0 ? 2 : 3);
+    const desglose = desgloseLatex(ys, peso);
+
     steps.push({
       iteration: n + 1,
       state: { h: round(h), sum: round(sum), integral: round(integral) },
-      explanation: `Integral ≈ (3h/8) · Σ pesos · f(x_i) = (3·${round(h)}/8)·${round(sum)} = ${round(integral)}.`,
-      latex: `\\int_{${a}}^{${b}} f(x)\\,dx \\approx ${round(integral)}`,
+      explanation:
+        `Se suman las alturas con su peso: los extremos una vez, los nodos múltiplos de 3 por 2 y los demás por 3. ` +
+        `La suma ponderada da S = ${num(sum)}. Multiplicándola por 3h/8 = ${num((3 * h) / 8)} se obtiene la integral aproximada: ${num(integral)}.`,
+      // Una cuenta por cada columna: h, S e integral.
+      latex: rejilla([
+        [['h', `\\frac{b-a}{n} = \\frac{${round(b)} - ${paren(a)}}{${n}} = ${round(h)}`]],
+        [['S', `f(x_0) + 3f(x_1) + 3f(x_2) + 2f(x_3) + \\dots + f(x_{${n}}) = ${desglose} = ${round(sum)}`]],
+        [[`I`, `\\int_{${a}}^{${b}} f(x)\\,dx \\approx \\frac{3h}{8}\\,S = \\frac{3(${round(h)})}{8}(${round(sum)}) = ${round(integral)}`]],
+      ]),
     });
 
     return {

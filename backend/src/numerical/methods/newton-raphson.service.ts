@@ -4,6 +4,7 @@ import { SolveResult, Step } from '../shared/step.types';
 import { NewtonInputDto } from '../dto/newton.dto';
 import { FeedbackService } from '../../feedback/feedback.service';
 import { FeedbackResult } from '../../feedback/feedback.types';
+import { num, paren, rejilla } from '../../common/texto';
 
 @Injectable()
 export class NewtonRaphsonService {
@@ -38,8 +39,26 @@ export class NewtonRaphsonService {
           xNext: round(xNext),
           error: round(error),
         },
-        explanation: `Iteración ${i}: x_{${i}} = x - f(x)/f'(x) = ${round(x)} - (${round(fx)})/(${round(dfx)}) = ${round(xNext)}. Error |Δx| = ${round(error)}.`,
-        latex: `x_{${i}} = ${round(x)} - \\frac{${round(fx)}}{${round(dfx)}} = ${round(xNext)}`,
+        // x_n es la aproximación con la que arranca esta iteración y x_{n+1}
+        // la que produce; se escriben con su índice real (x_0 -> x_1, ...)
+        // para que se vea de dónde sale cada número.
+        explanation:
+          `Partimos de x_${i - 1} = ${num(x)}. Ahí la función vale f(x_${i - 1}) = ${num(fx)} ` +
+          `y la derivada f'(x_${i - 1}) = ${num(dfx)}. Con la fórmula de Newton se obtiene ` +
+          `la nueva aproximación x_${i} = ${num(xNext)}, que se movió ${num(error)} respecto a la anterior (error).`,
+        // Una cuenta por cada columna de la tabla, con los valores reemplazados.
+        latex: rejilla([
+          [
+            [`x_{${i - 1}}`, i === 1 ? `${round(x)} \\;\\text{(valor inicial)}` : `${round(x)} \\;\\text{(resultado de la iteración anterior)}`],
+            [`f'(x)`, `${df.toLatex()} \\;\\text{(derivada de } f)`],
+          ],
+          [
+            [`f(x_{${i - 1}})`, `${f.sustituirLatex(x)} = ${round(fx)}`],
+            [`f'(x_{${i - 1}})`, `${df.sustituirLatex(x)} = ${round(dfx)}`],
+          ],
+          [[`x_{${i}}`, `x_{${i - 1}} - \\frac{f(x_{${i - 1}})}{f'(x_{${i - 1}})} = ${round(x)} - \\frac{${round(fx)}}{${round(dfx)}} = ${round(xNext)}`]],
+          [[`E`, `|x_{${i}} - x_{${i - 1}}| = |${round(xNext)} - ${paren(x)}| = ${round(error)}`]],
+        ]),
       });
 
       x = xNext;

@@ -56,6 +56,19 @@ export class Expr {
     return this.node.toTex();
   }
 
+  /**
+   * La expresión en LaTeX con x reemplazada por un valor, entre paréntesis
+   * para que la sustitución se vea (y los negativos no rompan las potencias):
+   * x^3 - x - 2 con x = 1.5  ->  (1.5)^{3} - (1.5) - 2
+   */
+  sustituirLatex(x: number): string {
+    const valor = Math.round(x * 1e6) / 1e6;
+    const sustituido = this.node.transform((n: any) =>
+      n.isSymbolNode && n.name === 'x' ? new math.ParenthesisNode(new math.ConstantNode(valor)) : n,
+    );
+    return sustituido.toTex({ parenthesis: 'keep' });
+  }
+
   toString(): string {
     return this.node.toString();
   }

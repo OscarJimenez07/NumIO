@@ -25,8 +25,28 @@ describe('FeedbackService', () => {
     expect(out.feedback.some((f) => f.field === 'c')).toBe(true);
   });
 
-  it('avisa pasos faltantes', () => {
+  it('califica solo las iteraciones enviadas (el formulario pide las primeras)', () => {
     const out = service.compare(expected, [expected[0]]);
-    expect(out.feedback.some((f) => f.field === '__steps__')).toBe(true);
+    expect(out.isCorrect).toBe(true);
+    expect(out.matchedSteps).toBe(1);
+    expect(out.totalSteps).toBe(1);
+    expect(out.feedback.length).toBe(0);
+  });
+
+  it('un error en las iteraciones enviadas sigue marcando isCorrect=false', () => {
+    const out = service.compare(expected, [{ iteration: 1, state: { a: 1, b: 2, c: 1.7 } }]);
+    expect(out.isCorrect).toBe(false);
+    expect(out.feedback.some((f) => f.field === 'c')).toBe(true);
+  });
+
+  it('iteraciones de más cuentan como error', () => {
+    const extra: Step[] = [...expected, { iteration: 3, state: { a: 1, b: 1.25, c: 1.125 } }];
+    const out = service.compare(expected, extra);
+    expect(out.isCorrect).toBe(false);
+    expect(out.feedback.some((f) => f.field === 'iteraciones')).toBe(true);
+  });
+
+  it('sin iteraciones enviadas no hay nada que dar por correcto', () => {
+    expect(service.compare(expected, []).isCorrect).toBe(false);
   });
 });

@@ -6,24 +6,37 @@ export class FeedbackService {
   /**
    * Compara los pasos esperados (algoritmo correcto) con los pasos ingresados
    * por el estudiante. Genera retroalimentación pedagógica para cada divergencia.
+   *
+   * Se califican solo las iteraciones que el estudiante envió: el modo práctica
+   * pide las primeras filas del procedimiento (p. ej. 5 de las 14 iteraciones
+   * de bisección, o las evaluaciones f(x_i) sin el paso final de la suma), así
+   * que exigir el resto marcaría como errada una práctica perfecta.
    */
   compare(expected: Step[], user: Step[], tolerance = 1e-3): FeedbackResult {
     const feedback: FeedbackItem[] = [];
     let matched = 0;
-    const total = expected.length;
 
     const limit = Math.min(expected.length, user.length);
+    const total = limit;
 
     for (let i = 0; i < limit; i++) {
       const exp = expected[i];
       const usr = user[i];
       const itemErrors: FeedbackItem[] = [];
 
-      for (const key of Object.keys(exp.state)) {
+      // Solo se evalúan los campos que el estudiante efectivamente reportó: cada
+      // método pide en pantalla un subconjunto del estado (p. ej. bisección pide
+      // a, b, c y f(c), no fa/fb/error). Reclamar campos que la interfaz nunca
+      // solicitó produciría errores incomprensibles en el modo práctica.
+      const reportedKeys = Object.keys(exp.state).filter((k) => usr.state && k in usr.state);
+      const keysToCheck = reportedKeys.length > 0 ? reportedKeys : Object.keys(exp.state);
+
+      for (const key of keysToCheck) {
         const expVal = exp.state[key];
         const usrVal = usr.state?.[key];
 
-        if (usrVal === undefined || usrVal === null) {
+        // Un campo dejado en blanco llega como NaN desde el formulario numérico.
+        if (usrVal === undefined || usrVal === null || (typeof usrVal === 'number' && Number.isNaN(usrVal))) {
           itemErrors.push({
             stepIndex: i,
             field: key,
@@ -86,28 +99,19 @@ export class FeedbackService {
       feedback.push(...itemErrors);
     }
 
-    if (user.length < expected.length) {
-      feedback.push({
-        stepIndex: user.length,
-        field: '__steps__',
-        expected: expected.length,
-        got: user.length,
-        message: `Faltan ${expected.length - user.length} iteración(es) por completar.`,
-        severity: 'warning',
-      });
-    } else if (user.length > expected.length) {
+    if (user.length > expected.length) {
       feedback.push({
         stepIndex: expected.length,
-        field: '__steps__',
+        field: 'iteraciones',
         expected: expected.length,
         got: user.length,
         message: `Ingresaste ${user.length - expected.length} iteración(es) de más; el método converge antes.`,
-        severity: 'warning',
+        severity: 'error',
       });
     }
 
     return {
-      isCorrect: feedback.filter((f) => f.severity === 'error').length === 0 && matched === total,
+      isCorrect: total > 0 && feedback.filter((f) => f.severity === 'error').length === 0 && matched === total,
       feedback,
       matchedSteps: matched,
       totalSteps: total,

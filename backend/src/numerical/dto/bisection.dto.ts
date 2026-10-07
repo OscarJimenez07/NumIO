@@ -1,4 +1,4 @@
-import { IsString, IsNumber, IsOptional, IsArray, ValidateNested } from 'class-validator';
+import { IsString, IsNumber, IsOptional, IsArray, IsObject, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class BisectionInputDto {
@@ -24,6 +24,9 @@ export class StepInputDto {
   @IsNumber()
   iteration!: number;
 
+  // @IsObject() es obligatorio: el ValidationPipe global usa forbidNonWhitelisted,
+  // por lo que una propiedad sin decorador sería rechazada con error 400.
+  @IsObject()
   state!: Record<string, any>;
 }
 

@@ -1,6 +1,6 @@
 export interface Step {
   iteration: number;
-  state: Record<string, number | string | number[]>;
+  state: Record<string, number | string | number[] | string[]>;
   explanation?: string;
   latex?: string;
 }

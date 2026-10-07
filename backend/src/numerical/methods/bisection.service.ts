@@ -4,6 +4,7 @@ import { SolveResult, Step } from '../shared/step.types';
 import { BisectionInputDto } from '../dto/bisection.dto';
 import { FeedbackService } from '../../feedback/feedback.service';
 import { FeedbackResult } from '../../feedback/feedback.types';
+import { intervalo, num, paren, rejilla } from '../../common/texto';
 
 @Injectable()
 export class BisectionService {
@@ -31,11 +32,39 @@ export class BisectionService {
     let prev = a;
     let error = Number.POSITIVE_INFINITY;
     let i = 0;
+    // Qué extremo se reemplazó por el punto medio en la iteración anterior,
+    // para mostrar de dónde sale el a y el b de cada fila.
+    let reemplazado: 'a' | 'b' | null = null;
 
     for (i = 1; i <= maxIter; i++) {
+      const origen = (extremo: 'a' | 'b', valor: number) =>
+        i === 1
+          ? `${round(valor)} \\;\\text{(dato inicial)}`
+          : reemplazado === extremo
+            ? `c_{${i - 1}} = ${round(valor)}`
+            : `${round(valor)} \\;\\text{(no cambia)}`;
       c = (a + b) / 2;
       fc = f.eval(c);
       error = i === 1 ? Math.abs(b - a) / 2 : Math.abs(c - prev);
+
+      // En la primera iteración el error es la mitad del intervalo, porque
+      // todavía no hay un punto medio anterior con el que comparar; desde la
+      // segunda es la distancia entre dos puntos medios consecutivos.
+      const errorExplicado =
+        i === 1
+          ? `El error es la mitad del ancho del intervalo: ${num(error)}.`
+          : `El error es la distancia al punto medio anterior c_${i - 1} = ${num(prev)}: ${num(error)}.`;
+      const errorLatex: [string, string] =
+        i === 1
+          ? [`E_{1}`, `\\frac{b-a}{2} = \\frac{${round(b)} - ${paren(a)}}{2} = ${round(error)}`]
+          : [`E_{${i}}`, `|c_{${i}} - c_{${i - 1}}| = |${round(c)} - ${paren(prev)}| = ${round(error)}`];
+
+      // Si f(a) y f(c) tienen signos opuestos, la raíz queda entre a y c.
+      const faActual = f.eval(a);
+      const izquierda = faActual * fc < 0;
+      const decision = izquierda
+        ? `f(c_${i}) y f(a) = ${num(faActual)} tienen signos opuestos, así que la raíz está entre a y c_${i}: el nuevo intervalo es ${intervalo(a, c)}.`
+        : `f(c_${i}) tiene el mismo signo que f(a) = ${num(faActual)}, así que la raíz está entre c_${i} y b: el nuevo intervalo es ${intervalo(c, b)}.`;
 
       steps.push({
         iteration: i,
@@ -48,15 +77,22 @@ export class BisectionService {
           fc: round(fc),
           error: round(error),
         },
-        explanation: `Iteración ${i}: c = (a+b)/2 = (${round(a)} + ${round(b)})/2 = ${round(c)}. f(c) = ${round(fc)}. ${
-          fa * fc < 0 ? 'Como f(a)·f(c)<0, la raíz está en [a,c], por lo que b←c.' : 'Como f(a)·f(c)>0, la raíz está en [c,b], por lo que a←c.'
-        }`,
-        latex: `c_{${i}} = \\frac{a+b}{2} = ${round(c)}, \\quad f(c_{${i}}) = ${round(fc)}`,
+        explanation:
+          `El punto medio del intervalo ${intervalo(a, b)} es c_${i} = ${num(c)}, y ahí la función vale f(c_${i}) = ${num(fc)}. ` +
+          `${decision} ${errorExplicado}`,
+        // Una cuenta por cada columna de la tabla, en el mismo orden.
+        latex: rejilla([
+          [['a', origen('a', a)], ['b', origen('b', b)]],
+          [['f(a)', `${f.sustituirLatex(a)} = ${round(faActual)}`], ['f(b)', `${f.sustituirLatex(b)} = ${round(f.eval(b))}`]],
+          [[`c_{${i}}`, `\\frac{a+b}{2} = \\frac{${round(a)} + ${paren(b)}}{2} = ${round(c)}`], [`f(c_{${i}})`, `${f.sustituirLatex(c)} = ${round(fc)}`]],
+          [errorLatex],
+        ]),
       });
 
       if (Math.abs(fc) < tol || error < tol) break;
-      if (f.eval(a) * fc < 0) b = c;
+      if (izquierda) b = c;
       else a = c;
+      reemplazado = izquierda ? 'b' : 'a';
       prev = c;
     }
 
