@@ -23,7 +23,7 @@ export function HomePage() {
     <div className="space-y-6">
       <div className="bg-white rounded-lg p-6 border border-slate-200">
         <h1 className="text-2xl font-bold text-slate-800">
-          Bienvenido{user ? `, ${user.fullName}` : ''} 👋
+          Bienvenido{user ? `, ${user.fullName}` : ''}
         </h1>
         <p className="text-slate-600 mt-1">
           Plataforma interactiva para el aprendizaje de Análisis Numérico e Investigación de Operaciones.
@@ -58,7 +58,7 @@ function Section({
           >
             <h3 className="font-semibold text-slate-800">{it.name}</h3>
             <p className="text-sm text-slate-600 mt-1">{it.desc}</p>
-            <span className="inline-block mt-3 text-xs text-brand-700 font-medium">Abrir módulo →</span>
+            <span className="inline-block mt-3 text-xs text-brand-800 font-medium">Abrir módulo →</span>
           </Link>
         ))}
       </div>

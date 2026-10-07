@@ -1,3 +1,4 @@
+import { useRef } from 'react';
 import Plot from 'react-plotly.js';
 import { sample } from '@/lib/math';
 
@@ -26,6 +27,13 @@ export function FunctionPlot({
   title,
   fillIntegralFrom,
 }: Props) {
+  // Mientras se edita un límite el rango puede quedar incompleto (campo vacío):
+  // se sigue dibujando con el último rango válido en lugar de dejar la gráfica en blanco.
+  const ultimoRango = useRef<[number, number]>([-1, 1]);
+  if (Number.isFinite(xRange[0]) && Number.isFinite(xRange[1]) && xRange[0] < xRange[1]) {
+    ultimoRango.current = xRange;
+  }
+  xRange = ultimoRango.current;
   const traces: any[] = [];
 
   if (fn) {
@@ -36,7 +44,7 @@ export function FunctionPlot({
       x: xs,
       y: ys,
       name: `f(x) = ${fn}`,
-      line: { color: '#2563eb', width: 2 },
+      line: { color: '#636F0B', width: 2.2 },
     });
     if (fillIntegralFrom) {
       const { xs: xf, ys: yf } = sample(fn, fillIntegralFrom[0], fillIntegralFrom[1], 300);
@@ -46,7 +54,7 @@ export function FunctionPlot({
         x: xf,
         y: yf,
         fill: 'tozeroy',
-        fillcolor: 'rgba(59,130,246,0.15)',
+        fillcolor: 'rgba(193,214,49,0.32)',
         line: { color: 'transparent' },
         name: 'Área',
         hoverinfo: 'skip',
@@ -58,7 +66,7 @@ export function FunctionPlot({
       mode: 'lines',
       x: [xRange[0], xRange[1]],
       y: [0, 0],
-      line: { color: '#94a3b8', width: 1 },
+      line: { color: '#A8AC9A', width: 1 },
       hoverinfo: 'skip',
       showlegend: false,
     });
@@ -73,7 +81,7 @@ export function FunctionPlot({
       text: marks.map((m) => m.label ?? ''),
       textposition: 'top center',
       marker: {
-        color: marks.map((_, i) => (i === highlightIndex ? '#ef4444' : '#1e40af')),
+        color: marks.map((_, i) => (i === highlightIndex ? '#C2410C' : '#4B5507')),
         size: marks.map((_, i) => (i === highlightIndex ? 12 : 7)),
       },
       name: 'Iteraciones',
@@ -88,8 +96,8 @@ export function FunctionPlot({
         autosize: true,
         height,
         margin: { l: 40, r: 20, t: title ? 40 : 20, b: 40 },
-        xaxis: { zeroline: false, gridcolor: '#e2e8f0' },
-        yaxis: { zeroline: false, gridcolor: '#e2e8f0' },
+        xaxis: { zeroline: false, gridcolor: '#E8EAE1' },
+        yaxis: { zeroline: false, gridcolor: '#E8EAE1' },
         plot_bgcolor: '#ffffff',
         paper_bgcolor: '#ffffff',
         legend: { orientation: 'h' },

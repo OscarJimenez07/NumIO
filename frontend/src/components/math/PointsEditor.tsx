@@ -1,3 +1,5 @@
+import { NumberInput } from './NumberInput';
+
 interface Point { x: number; y: number; }
 
 interface Props {
@@ -6,9 +8,9 @@ interface Props {
 }
 
 export function PointsEditor({ points, onChange }: Props) {
-  const update = (i: number, key: 'x' | 'y', val: string) => {
+  const update = (i: number, key: 'x' | 'y', val: number) => {
     const next = [...points];
-    next[i] = { ...next[i], [key]: parseFloat(val) || 0 };
+    next[i] = { ...next[i], [key]: val };
     onChange(next);
   };
   const add = () => onChange([...points, { x: 0, y: 0 }]);
@@ -28,10 +30,10 @@ export function PointsEditor({ points, onChange }: Props) {
           {points.map((p, i) => (
             <tr key={i}>
               <td className="pr-1 py-1">
-                <input className="input font-mono" type="number" step="any" value={p.x} onChange={(e) => update(i, 'x', e.target.value)} />
+                <NumberInput className="input font-mono" step="any" value={p.x} onChange={(v) => update(i, 'x', v)} />
               </td>
               <td className="pr-1 py-1">
-                <input className="input font-mono" type="number" step="any" value={p.y} onChange={(e) => update(i, 'y', e.target.value)} />
+                <NumberInput className="input font-mono" step="any" value={p.y} onChange={(v) => update(i, 'y', v)} />
               </td>
               <td className="py-1">
                 <button className="btn-ghost text-rose-700" onClick={() => remove(i)} disabled={points.length <= 2}>✕</button>

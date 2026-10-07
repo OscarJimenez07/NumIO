@@ -1,21 +1,25 @@
-import { IsBoolean, IsObject, IsOptional, IsString } from 'class-validator';
+import { Allow, IsBoolean, IsDefined, IsOptional, IsString } from 'class-validator';
 
 export class CreateAttemptDto {
   @IsString()
   methodSlug!: string;
 
-  @IsObject()
+  // Estos campos viajan como arrays de pasos, no como objetos: @IsObject()
+  // los rechazaba y ningún intento llegaba a guardarse. Se validan solo por
+  // presencia, porque su forma cambia según el método y Prisma los almacena
+  // en columnas JSON.
+  @IsDefined()
   input!: any;
 
-  @IsObject()
+  @IsDefined()
   steps!: any;
 
   @IsOptional()
-  @IsObject()
+  @Allow()
   userSteps?: any;
 
   @IsOptional()
-  @IsObject()
+  @Allow()
   feedback?: any;
 
   @IsOptional()

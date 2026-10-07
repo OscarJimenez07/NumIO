@@ -7,7 +7,7 @@
     height: 100%;
   }
   body {
-    @apply antialiased;
+    @apply antialiased text-slate-900;
   }
 }
 
@@ -15,17 +15,19 @@
   .btn {
     @apply inline-flex items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed;
   }
+  /* El lima lleva tinta oscura encima, nunca blanco: sobre #C1D631 el texto
+     blanco queda en 1.6:1 y es ilegible, mientras que la tinta da 10.5:1. */
   .btn-primary {
-    @apply btn bg-brand-600 text-white hover:bg-brand-700 focus:ring-brand-500;
+    @apply btn bg-brand-500 text-ink font-semibold hover:bg-brand-400 focus:ring-brand-600;
   }
   .btn-secondary {
-    @apply btn bg-white text-slate-900 border border-slate-300 hover:bg-slate-50 focus:ring-brand-500;
+    @apply btn bg-white text-slate-900 border border-slate-300 hover:bg-slate-50 focus:ring-brand-600;
   }
   .btn-ghost {
     @apply btn text-slate-700 hover:bg-slate-100;
   }
   .input {
-    @apply block w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500;
+    @apply block w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-brand-600 focus:outline-none focus:ring-1 focus:ring-brand-600;
   }
   .label {
     @apply block text-sm font-medium text-slate-700 mb-1;

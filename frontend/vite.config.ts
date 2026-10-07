@@ -12,5 +12,14 @@ export default defineConfig({
   server: {
     port: 5173,
     host: true,
+    // Mismo enrutado que hace nginx en producción, para que en desarrollo la
+    // interfaz también llame a /api y no dependa de ninguna dirección fija.
+    proxy: {
+      '/api': {
+        target: process.env.VITE_DEV_API ?? 'http://localhost:3000',
+        changeOrigin: true,
+        rewrite: (ruta) => ruta.replace(/^\/api/, ''),
+      },
+    },
   },
 });
