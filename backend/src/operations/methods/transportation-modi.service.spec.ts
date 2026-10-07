@@ -17,7 +17,8 @@ describe('TransportationModiService', () => {
     const demand = [5, 15, 15, 15];
 
     const out = service.solve({ costs, supply, demand });
-    expect(out.result.totalCost).toBeLessThanOrEqual(440); // cota razonable de óptimo
+    // Óptimo conocido del problema (SunRay Transport, Taha): 435
+    expect(out.result.totalCost).toBeCloseTo(435, 4);
   });
 
   it('Rechaza problema no balanceado', () => {

@@ -5,14 +5,14 @@ describe('AssignmentHungarianService', () => {
   const service = new AssignmentHungarianService(new FeedbackService());
 
   it('Resuelve matriz 3x3 clásica', () => {
-    // Ejemplo: costo mínimo = 13 (asignación 1→2, 2→3, 3→1)
+    // Costo mínimo = 16 (asignación 1→1, 2→3, 3→2: 3 + 7 + 6)
     const costs = [
       [3, 5, 11],
       [4, 8, 7],
       [9, 6, 10],
     ];
     const out = service.solve({ costs });
-    expect(out.result.totalCost).toBeCloseTo(17, 4);
+    expect(out.result.totalCost).toBeCloseTo(16, 4);
   });
 
   it('Maximización: invierte la matriz', () => {

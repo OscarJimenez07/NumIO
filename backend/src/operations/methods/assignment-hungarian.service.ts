@@ -3,6 +3,32 @@ import { SolveResult, Step } from '../../numerical/shared/step.types';
 import { AssignmentInputDto } from '../dto/assignment.dto';
 import { FeedbackService } from '../../feedback/feedback.service';
 import { FeedbackResult } from '../../feedback/feedback.types';
+import { num as fmt, redondear, rejilla } from '../../common/texto';
+
+/**
+ * Una línea por fila (o columna): T_1: min(3, 5, 11) = 3. Se omiten los costos
+ * de relleno (M) y las líneas ficticias, que solo existen para cuadrar la matriz.
+ */
+function minimosLatex(lineas: number[][], minimos: number[], letra: string, M: number): string {
+  const filas = lineas
+    .map((vals, k) => {
+      const reales = vals.filter((v) => v < M);
+      if (reales.length === 0) return null;
+      const min = minimos[k];
+      const fin = min > 0 && min < M ? `\\;\\Rightarrow\\; \\text{restar } ${redondear(min)}` : '\\;\\Rightarrow\\; \\text{ya tiene un } 0';
+      return `${letra}_{${k + 1}}:&\\ \\min(${reales.map((v) => redondear(v)).join(', ')}) = ${redondear(Math.min(...reales))}${fin}`;
+    })
+    .filter(Boolean);
+  return `\\begin{aligned}${filas.join(' \\\\ ')}\\end{aligned}`;
+}
+
+/** «T_1 − 3, T_2 − 4» con las restas que sí se hicieron (sin filas ficticias). */
+function restas(valores: number[], letra: string, M: number): string {
+  return valores
+    .map((v, k) => (v > 0 && v < M ? `${letra}_${k + 1} − ${fmt(v)}` : null))
+    .filter(Boolean)
+    .join(', ');
+}
 
 @Injectable()
 export class AssignmentHungarianService {
@@ -29,32 +55,51 @@ export class AssignmentHungarianService {
       cost = cost.map((row) => row.map((v) => (v >= M ? v : max - v)));
       steps.push({
         iteration: 0,
-        state: { matrix: cost.map((r) => r.map(round)).flat(), n },
-        explanation: `Maximización: matriz transformada restando cada valor del máximo (${max}).`,
+        state: { matrix: cost.map((r) => r.map((v) => round(v))).flat(), n },
+        explanation:
+          `Como se quiere maximizar, cada valor se resta del mayor de la matriz (${fmt(max)}). ` +
+          'Así el valor más alto pasa a ser el costo más bajo y el problema se resuelve minimizando.',
+        latex: `c'_{ij} = \\max_{ij}(c) - c_{ij} = ${max} - c_{ij}`,
       });
     }
 
     // Paso 1: restar mínimo de cada fila
+    const minFilas: number[] = [];
+    const filasAntes = cost.map((r) => [...r]);
     for (let i = 0; i < n; i++) {
       const min = Math.min(...cost[i]);
+      minFilas.push(min);
       for (let j = 0; j < n; j++) cost[i][j] -= min;
     }
     steps.push({
       iteration: 1,
-      state: { matrix: cost.map((r) => r.map(round)).flat(), n },
-      explanation: 'Paso 1: restar el mínimo de cada fila.',
+      state: { matrix: cost.map((r) => r.map((v) => round(v))).flat(), n },
+      explanation:
+        'Paso 1: a cada fila se le resta su valor más pequeño, para que cada tarea tenga al menos un 0: ' +
+        `${restas(minFilas, 'T', M) || 'todas las filas ya tenían un 0'}.`,
+      latex: minimosLatex(filasAntes, minFilas, 'T', M),
     });
 
     // Paso 2: restar mínimo de cada columna
+    const minColumnas: number[] = [];
+    // Columnas tal como quedaron tras el paso 1 (traspuestas para reusar el formato por filas).
+    const columnasAntes = Array.from({ length: n }, (_, j) => cost.map((r) => r[j]));
     for (let j = 0; j < n; j++) {
       let min = Number.POSITIVE_INFINITY;
       for (let i = 0; i < n; i++) min = Math.min(min, cost[i][j]);
-      if (min > 0 && min < M) for (let i = 0; i < n; i++) cost[i][j] -= min;
+      const resta = min > 0 && min < M ? min : 0;
+      minColumnas.push(resta);
+      if (resta > 0) for (let i = 0; i < n; i++) cost[i][j] -= resta;
     }
+    const restasColumnas = restas(minColumnas, 'R', M);
     steps.push({
       iteration: 2,
-      state: { matrix: cost.map((r) => r.map(round)).flat(), n },
-      explanation: 'Paso 2: restar el mínimo de cada columna.',
+      state: { matrix: cost.map((r) => r.map((v) => round(v))).flat(), n },
+      explanation: restasColumnas
+        ? `Paso 2: a cada columna se le resta su valor más pequeño, para que cada recurso tenga al menos un 0: ${restasColumnas}. ` +
+          'Las demás columnas ya tenían un 0 y no cambian.'
+        : 'Paso 2: se revisan las columnas, pero todas ya tienen al menos un 0, así que no cambian.',
+      latex: minimosLatex(columnasAntes, columnasAntes.map((col) => Math.min(...col)), 'R', M),
     });
 
     // Paso 3-5: cubrir ceros con mínimo de líneas y ajustar
@@ -64,15 +109,35 @@ export class AssignmentHungarianService {
       steps.push({
         iteration: iteration++,
         state: { lines, rowsCovered: rowCovered.filter(Boolean).length, colsCovered: colCovered.filter(Boolean).length, n },
-        explanation: `Cubrir todos los ceros con ${lines} línea(s).`,
+        explanation:
+          `Se tachan todos los ceros con el menor número posible de líneas (filas o columnas): ${lines}. ` +
+          (lines >= n
+            ? `Como son tantas líneas como filas tiene la matriz (${n}), ya se puede elegir un 0 en cada fila y columna: esa es la asignación óptima.`
+            : `Como son menos que el tamaño de la matriz (${n}), todavía no se puede elegir un 0 en cada fila y columna: hay que ajustar.`),
+        latex: rejilla([
+          [[
+            '\\text{Líneas}',
+            `\\text{filas tachadas} + \\text{columnas tachadas} = ${rowCovered.filter(Boolean).length} + ${colCovered.filter(Boolean).length} = ${lines}`,
+          ]],
+          [[
+            lines >= n
+              ? `\\text{Comparación: } ${lines} = n = ${n} \\;\\Rightarrow\\; \\text{asignación óptima}`
+              : `\\text{Comparación: } ${lines} < n = ${n} \\;\\Rightarrow\\; \\text{ajustar la matriz}`,
+            '',
+          ]],
+        ]),
       });
       if (lines >= n) break;
 
       // Encontrar mínimo no cubierto, restarlo de no cubiertos y sumarlo a doblemente cubiertos
       let minUncovered = Number.POSITIVE_INFINITY;
+      const libres: number[] = [];
       for (let i = 0; i < n; i++)
         for (let j = 0; j < n; j++)
-          if (!rowCovered[i] && !colCovered[j] && cost[i][j] < minUncovered) minUncovered = cost[i][j];
+          if (!rowCovered[i] && !colCovered[j]) {
+            if (cost[i][j] < M) libres.push(round(cost[i][j]));
+            if (cost[i][j] < minUncovered) minUncovered = cost[i][j];
+          }
 
       if (!Number.isFinite(minUncovered)) break;
 
@@ -83,8 +148,13 @@ export class AssignmentHungarianService {
         }
       steps.push({
         iteration: iteration++,
-        state: { matrix: cost.map((r) => r.map(round)).flat(), n, minUncovered: round(minUncovered) },
-        explanation: `Ajuste: mínimo no cubierto = ${round(minUncovered)}. Restado a no cubiertos, sumado a doblemente cubiertos.`,
+        state: { matrix: cost.map((r) => r.map((v) => round(v))).flat(), n, minUncovered: round(minUncovered) },
+        explanation:
+          `El menor valor que quedó sin tachar es δ = ${fmt(minUncovered)}. Se resta a todos los valores sin tachar ` +
+          'para crear un nuevo 0, y se suma a los que están en el cruce de dos líneas; los tachados una sola vez no cambian.',
+        latex:
+          `\\delta = \\min(${libres.join(', ')}) = ${round(minUncovered)}` +
+          `\\qquad \\text{sin tachar: } c_{ij} - ${round(minUncovered)}\\qquad \\text{en cruces: } c_{ij} + ${round(minUncovered)}`,
       });
       if (iteration > 200) break; // safety
     }
