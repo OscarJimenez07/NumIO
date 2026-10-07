@@ -15,6 +15,13 @@ out/
 .env
 .env.local
 .env.*.local
+# Claves reales del servidor de producción: nunca al repositorio
+despliegue/.env.produccion
+
+# Salidas de compilación de TypeScript (tsc -b)
+*.tsbuildinfo
+frontend/vite.config.js
+frontend/vite.config.d.ts
 
 # Prisma
 backend/prisma/migrations/dev.db*
