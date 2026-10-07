@@ -5,9 +5,11 @@ import { FunctionPlot } from '@/components/math/FunctionPlot';
 import { IterationsTable } from '@/components/math/IterationsTable';
 import { StepPlayer } from '@/components/math/StepPlayer';
 import { KaTeXBlock } from '@/components/math/KaTeXBlock';
+import { MathText } from '@/components/math/MathText';
 import { FeedbackPanel } from '@/components/feedback/FeedbackPanel';
 import { StepInputForm } from '@/components/feedback/StepInputForm';
 import { saveAttempt, useSolver, useValidator } from '@/hooks/useSolver';
+import { NumberInput } from '@/components/math/NumberInput';
 
 export function NewtonRaphsonPage() {
   const [fn, setFn] = useState('x^2 - 2');
@@ -53,11 +55,11 @@ export function NewtonRaphsonPage() {
             </div>
             <div>
               <label className="label">x₀</label>
-              <input className="input" type="number" step="any" value={x0} onChange={(e) => setX0(Number(e.target.value))} />
+              <NumberInput className="input" step="any" value={x0} onChange={(v) => setX0(v)} />
             </div>
             <div>
               <label className="label">Tolerancia</label>
-              <input className="input" type="number" step="any" value={tol} onChange={(e) => setTol(Number(e.target.value))} />
+              <NumberInput className="input" step="any" value={tol} onChange={(v) => setTol(v)} />
             </div>
             <button className="btn-primary w-full" onClick={onSolve} disabled={loading}>
               {loading ? 'Resolviendo...' : 'Resolver'}
@@ -86,7 +88,7 @@ export function NewtonRaphsonPage() {
         <div className="space-y-6">
           <StepPlayer total={data.steps.length} index={stepIdx} onChange={setStepIdx} />
           <div className="card">
-            <p className="text-sm text-slate-700">{data.steps[stepIdx]?.explanation}</p>
+            <p className="text-sm text-slate-700"><MathText text={data.steps[stepIdx]?.explanation} /></p>
             {data.steps[stepIdx]?.latex && (
               <div className="mt-2 text-center"><KaTeXBlock tex={data.steps[stepIdx].latex!} /></div>
             )}
@@ -94,7 +96,7 @@ export function NewtonRaphsonPage() {
 
           <Tabs
             tabs={[
-              { id: 'auto', label: 'Iteraciones', content: <IterationsTable steps={data.steps} highlightIndex={stepIdx} onRowClick={setStepIdx} /> },
+              { id: 'auto', label: 'Iteraciones', content: <IterationsTable steps={data.steps} method="newton-raphson" highlightIndex={stepIdx} onRowClick={setStepIdx} /> },
               {
                 id: 'practice',
                 label: 'Practicar',
@@ -103,15 +105,16 @@ export function NewtonRaphsonPage() {
                     <StepInputForm
                       numIterations={Math.min(5, data.steps.length)}
                       fields={[
-                        { key: 'x', label: 'x' },
-                        { key: 'fx', label: 'f(x)' },
-                        { key: 'dfx', label: "f'(x)" },
-                        { key: 'xNext', label: 'x_{i+1}' },
+                        { key: 'x', label: 'x_n' },
+                        { key: 'fx', label: 'f(x_n)' },
+                        { key: 'dfx', label: "f'(x_n)" },
+                        { key: 'xNext', label: 'x_{n+1}' },
                       ]}
                       onSubmit={validateSteps}
                       loading={validator.loading}
                     />
                     {validator.data && <FeedbackPanel {...validator.data} />}
+                    {validator.error && <p className="text-sm text-rose-700">{validator.error}</p>}
                   </div>
                 ),
               },

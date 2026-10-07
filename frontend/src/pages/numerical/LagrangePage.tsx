@@ -4,10 +4,13 @@ import { Tabs } from '@/components/layout/Tabs';
 import { FunctionPlot } from '@/components/math/FunctionPlot';
 import { IterationsTable } from '@/components/math/IterationsTable';
 import { StepPlayer } from '@/components/math/StepPlayer';
+import { KaTeXBlock } from '@/components/math/KaTeXBlock';
+import { MathText } from '@/components/math/MathText';
 import { FeedbackPanel } from '@/components/feedback/FeedbackPanel';
 import { StepInputForm } from '@/components/feedback/StepInputForm';
 import { saveAttempt, useSolver, useValidator } from '@/hooks/useSolver';
 import { PointsEditor } from '@/components/math/PointsEditor';
+import { NumberInput } from '@/components/math/NumberInput';
 
 export function LagrangePage() {
   const [points, setPoints] = useState([
@@ -50,7 +53,7 @@ export function LagrangePage() {
           <PointsEditor points={points} onChange={setPoints} />
           <div>
             <label className="label">Evaluar en x =</label>
-            <input className="input" type="number" step="any" value={evalAt} onChange={(e) => setEvalAt(Number(e.target.value))} />
+            <NumberInput className="input" step="any" value={evalAt} onChange={(v) => setEvalAt(v)} />
           </div>
           <button className="btn-primary w-full" onClick={onSolve} disabled={loading}>
             {loading ? 'Resolviendo...' : 'Construir polinomio'}
@@ -73,17 +76,22 @@ export function LagrangePage() {
         <div className="space-y-6">
           <StepPlayer total={data.steps.length} index={stepIdx} onChange={setStepIdx} />
           <div className="card">
-            <p className="text-sm text-slate-700">{data.steps[stepIdx]?.explanation}</p>
+            <p className="text-sm text-slate-700"><MathText text={data.steps[stepIdx]?.explanation} /></p>
+            {data.steps[stepIdx]?.latex && (
+              <div className="mt-2 text-center">
+                <KaTeXBlock tex={data.steps[stepIdx].latex!} />
+              </div>
+            )}
           </div>
           <Tabs
             tabs={[
-              { id: 'steps', label: 'Pasos', content: <IterationsTable steps={data.steps} highlightIndex={stepIdx} onRowClick={setStepIdx} /> },
+              { id: 'steps', label: 'Pasos', content: <IterationsTable steps={data.steps} method="lagrange" highlightIndex={stepIdx} onRowClick={setStepIdx} /> },
               {
                 id: 'result',
                 label: 'Polinomio resultante',
                 content: (
                   <div className="card whitespace-pre-wrap font-mono text-sm">
-                    {data.result.polynomial}
+                    <MathText text={data.result.polynomial} />
                     {data.result.evaluatedValue !== undefined && (
                       <p className="mt-3 font-sans text-slate-700">
                         <strong>P({data.result.evaluatedAt}) = {data.result.evaluatedValue}</strong>
@@ -102,12 +110,13 @@ export function LagrangePage() {
                       fields={[
                         { key: 'xi', label: 'x_i' },
                         { key: 'yi', label: 'y_i' },
-                        { key: 'denominator', label: 'Denominador L_i' },
+                        { key: 'denominator', label: '\\text{Denominador } L_i' },
                       ]}
                       onSubmit={validateSteps}
                       loading={validator.loading}
                     />
                     {validator.data && <FeedbackPanel {...validator.data} />}
+                    {validator.error && <p className="text-sm text-rose-700">{validator.error}</p>}
                   </div>
                 ),
               },

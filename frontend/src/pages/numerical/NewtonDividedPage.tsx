@@ -4,8 +4,11 @@ import { Tabs } from '@/components/layout/Tabs';
 import { FunctionPlot } from '@/components/math/FunctionPlot';
 import { IterationsTable } from '@/components/math/IterationsTable';
 import { StepPlayer } from '@/components/math/StepPlayer';
+import { KaTeXBlock } from '@/components/math/KaTeXBlock';
+import { MathText } from '@/components/math/MathText';
 import { PointsEditor } from '@/components/math/PointsEditor';
 import { saveAttempt, useSolver } from '@/hooks/useSolver';
+import { NumberInput } from '@/components/math/NumberInput';
 
 export function NewtonDividedPage() {
   const [points, setPoints] = useState([
@@ -41,7 +44,7 @@ export function NewtonDividedPage() {
           <PointsEditor points={points} onChange={setPoints} />
           <div>
             <label className="label">Evaluar en x =</label>
-            <input className="input" type="number" step="any" value={evalAt} onChange={(e) => setEvalAt(Number(e.target.value))} />
+            <NumberInput className="input" step="any" value={evalAt} onChange={(v) => setEvalAt(v)} />
           </div>
           <button className="btn-primary w-full" onClick={onSolve} disabled={loading}>
             {loading ? 'Calculando...' : 'Calcular tabla y polinomio'}
@@ -61,15 +64,23 @@ export function NewtonDividedPage() {
       {data && (
         <div className="space-y-6">
           <StepPlayer total={data.steps.length} index={stepIdx} onChange={setStepIdx} />
+          <div className="card">
+            <p className="text-sm text-slate-700"><MathText text={data.steps[stepIdx]?.explanation} /></p>
+            {data.steps[stepIdx]?.latex && (
+              <div className="mt-2 text-center">
+                <KaTeXBlock tex={data.steps[stepIdx].latex!} />
+              </div>
+            )}
+          </div>
           <Tabs
             tabs={[
-              { id: 'steps', label: 'Pasos', content: <IterationsTable steps={data.steps} highlightIndex={stepIdx} onRowClick={setStepIdx} /> },
+              { id: 'steps', label: 'Pasos', content: <IterationsTable steps={data.steps} method="newton-divided" highlightIndex={stepIdx} onRowClick={setStepIdx} /> },
               {
                 id: 'poly',
                 label: 'Polinomio',
                 content: (
                   <div className="card font-mono text-sm whitespace-pre-wrap">
-                    {data.result.polynomial}
+                    <MathText text={data.result.polynomial} />
                     {data.result.evaluatedValue !== undefined && (
                       <p className="mt-3 font-sans text-slate-700">
                         <strong>P({data.result.evaluatedAt}) = {data.result.evaluatedValue}</strong>

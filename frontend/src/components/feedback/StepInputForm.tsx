@@ -1,7 +1,9 @@
 import { useState } from 'react';
+import { KaTeXBlock } from '@/components/math/KaTeXBlock';
 
 interface FieldDef {
   key: string;
+  /** Encabezado en notación LaTeX (p. ej. x_{n+1}). */
   label: string;
 }
 
@@ -46,7 +48,9 @@ export function StepInputForm({ numIterations, fields, onSubmit, loading }: Prop
             <tr>
               <th>#</th>
               {fields.map((f) => (
-                <th key={f.key} className="font-mono">{f.label}</th>
+                <th key={f.key} className="whitespace-nowrap">
+                  <KaTeXBlock tex={f.label} displayMode={false} />
+                </th>
               ))}
             </tr>
           </thead>

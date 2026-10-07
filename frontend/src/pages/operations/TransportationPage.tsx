@@ -2,7 +2,13 @@ import { useState } from 'react';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Tabs } from '@/components/layout/Tabs';
 import { StepPlayer } from '@/components/math/StepPlayer';
+import { KaTeXBlock } from '@/components/math/KaTeXBlock';
+import { MathText } from '@/components/math/MathText';
 import { saveAttempt, useSolver } from '@/hooks/useSolver';
+import { NumberInput } from '@/components/math/NumberInput';
+
+/** Suma ignorando los campos que están vacíos mientras se editan. */
+const suma = (xs: number[]) => xs.reduce((a, b) => a + (Number.isFinite(b) ? b : 0), 0);
 
 export function TransportationPage() {
   const [m, setM] = useState(3);
@@ -19,6 +25,8 @@ export function TransportationPage() {
   const { data, loading, error, solve } = useSolver('/operations/transportation');
 
   const resize = (newM: number, newN: number) => {
+  // Mientras el campo está vacío o fuera de rango se conserva la matriz actual.
+    if (![newM, newN].every((k) => Number.isInteger(k) && k >= 2 && k <= 6)) return;
     setM(newM);
     setN(newN);
     setCosts((prev) => {
@@ -55,11 +63,11 @@ export function TransportationPage() {
         <div className="flex gap-3 mb-4 items-end">
           <div>
             <label className="label">Fuentes (m)</label>
-            <input className="input w-20" type="number" min={2} max={6} value={m} onChange={(e) => resize(Number(e.target.value), n)} />
+            <NumberInput className="input w-20" min={2} max={6} value={m} onChange={(v) => resize(v, n)} />
           </div>
           <div>
             <label className="label">Destinos (n)</label>
-            <input className="input w-20" type="number" min={2} max={6} value={n} onChange={(e) => resize(m, Number(e.target.value))} />
+            <NumberInput className="input w-20" min={2} max={6} value={n} onChange={(v) => resize(m, v)} />
           </div>
           <button className="btn-primary ml-auto" onClick={onSolve} disabled={loading}>
             {loading ? 'Resolviendo...' : 'Resolver (Vogel + MODI)'}
@@ -81,28 +89,26 @@ export function TransportationPage() {
                 <td className="font-medium">F{i + 1}</td>
                 {row.map((v, j) => (
                   <td key={j}>
-                    <input
+                    <NumberInput
                       className="input font-mono w-16"
-                      type="number"
                       step="any"
                       value={v}
-                      onChange={(e) => {
+                      onChange={(v) => {
                         const next = costs.map((r) => [...r]);
-                        next[i][j] = Number(e.target.value);
+                        next[i][j] = v;
                         setCosts(next);
                       }}
                     />
                   </td>
                 ))}
                 <td className="bg-amber-50">
-                  <input
+                  <NumberInput
                     className="input font-mono w-20"
-                    type="number"
                     step="any"
                     value={supply[i]}
-                    onChange={(e) => {
+                    onChange={(v) => {
                       const next = [...supply];
-                      next[i] = Number(e.target.value);
+                      next[i] = v;
                       setSupply(next);
                     }}
                   />
@@ -113,21 +119,20 @@ export function TransportationPage() {
               <td className="font-medium">Demanda</td>
               {demand.map((v, j) => (
                 <td key={j}>
-                  <input
+                  <NumberInput
                     className="input font-mono w-16"
-                    type="number"
                     step="any"
                     value={v}
-                    onChange={(e) => {
+                    onChange={(v) => {
                       const next = [...demand];
-                      next[j] = Number(e.target.value);
+                      next[j] = v;
                       setDemand(next);
                     }}
                   />
                 </td>
               ))}
               <td>
-                {supply.reduce((a, b) => a + b, 0)} / {demand.reduce((a, b) => a + b, 0)}
+                {suma(supply)} / {suma(demand)}
               </td>
             </tr>
           </tbody>
@@ -161,7 +166,12 @@ export function TransportationPage() {
 
           <StepPlayer total={data.steps.length} index={stepIdx} onChange={setStepIdx} />
           <div className="card">
-            <p className="text-sm text-slate-700">{data.steps[stepIdx]?.explanation}</p>
+            <p className="text-sm text-slate-700"><MathText text={data.steps[stepIdx]?.explanation} /></p>
+            {data.steps[stepIdx]?.latex && (
+              <div className="mt-2 text-center">
+                <KaTeXBlock tex={data.steps[stepIdx].latex!} />
+              </div>
+            )}
           </div>
 
           <Tabs
@@ -182,7 +192,7 @@ export function TransportationPage() {
                         {data.steps.map((s, i) => (
                           <tr key={i} className={stepIdx === i ? 'bg-brand-50' : ''}>
                             <td>{s.iteration}</td>
-                            <td className="text-sm">{s.explanation}</td>
+                            <td className="text-sm"><MathText text={s.explanation} /></td>
                           </tr>
                         ))}
                       </tbody>

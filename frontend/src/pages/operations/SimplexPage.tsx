@@ -3,7 +3,10 @@ import { PageHeader } from '@/components/layout/PageHeader';
 import { Tabs } from '@/components/layout/Tabs';
 import { TableauView } from '@/components/math/TableauView';
 import { StepPlayer } from '@/components/math/StepPlayer';
+import { KaTeXBlock } from '@/components/math/KaTeXBlock';
+import { MathText } from '@/components/math/MathText';
 import { saveAttempt, useSolver } from '@/hooks/useSolver';
+import { NumberInput } from '@/components/math/NumberInput';
 
 interface Constraint { coefficients: number[]; operator: '<=' | '>=' | '='; rhs: number; }
 
@@ -22,6 +25,8 @@ export function SimplexPage() {
   const numVars = c.length;
 
   const setVarsCount = (n: number) => {
+  // Mientras el campo está vacío o fuera de rango se conserva el modelo actual.
+    if (!Number.isInteger(n) || n < 2 || n > 6) return;
     setC((prev) => {
       const next = [...prev];
       while (next.length < n) next.push(0);
@@ -45,7 +50,7 @@ export function SimplexPage() {
     const r = await solve({ objective, c, constraints });
     if (r) {
       setStepIdx(0);
-      saveAttempt({ methodSlug: 'simplex', input: { objective, c, constraints }, steps: r.steps, isCorrect: !r.result.unbounded });
+      saveAttempt({ methodSlug: 'simplex', input: { objective, c, constraints }, steps: r.steps, isCorrect: !r.result.unbounded && !r.result.infeasible });
     }
   };
 
@@ -54,7 +59,7 @@ export function SimplexPage() {
       <PageHeader
         title="Método Símplex"
         category="Investigación de Operaciones · Programación Lineal"
-        description="Resuelve problemas de programación lineal mediante el método tabular estándar."
+        description="Resuelve problemas de programación lineal con el método símplex tabular; las restricciones «≥» e «=» se resuelven con el método de las dos fases."
         reference="Hillier, F. & Lieberman, G. (2015). Introducción a la investigación de operaciones."
       />
 
@@ -72,22 +77,21 @@ export function SimplexPage() {
 
           <div>
             <label className="label"># variables</label>
-            <input className="input" type="number" min={2} max={6} value={numVars} onChange={(e) => setVarsCount(Number(e.target.value))} />
+            <NumberInput className="input" min={2} max={6} value={numVars} onChange={(v) => setVarsCount(v)} />
           </div>
 
           <div>
             <label className="label">Coeficientes Z</label>
             <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${numVars}, 1fr)` }}>
               {c.map((v, i) => (
-                <input
+                <NumberInput
                   key={i}
                   className="input font-mono"
-                  type="number"
                   step="any"
                   value={v}
-                  onChange={(e) => {
+                  onChange={(v) => {
                     const next = [...c];
-                    next[i] = Number(e.target.value);
+                    next[i] = v;
                     setC(next);
                   }}
                 />
@@ -102,22 +106,21 @@ export function SimplexPage() {
                 <div key={i} className="flex items-center gap-1">
                   <div className="grid flex-1 gap-1" style={{ gridTemplateColumns: `repeat(${numVars}, 1fr)` }}>
                     {ct.coefficients.map((v, j) => (
-                      <input
+                      <NumberInput
                         key={j}
-                        className="input font-mono"
-                        type="number"
+                        className="input min-w-0 px-1 text-center font-mono"
                         step="any"
                         value={v}
-                        onChange={(e) => {
+                        onChange={(v) => {
                           const next = [...constraints];
-                          next[i].coefficients[j] = Number(e.target.value);
+                          next[i].coefficients[j] = v;
                           setConstraints(next);
                         }}
                       />
                     ))}
                   </div>
                   <select
-                    className="input w-16"
+                    className="input w-14 shrink-0 px-1"
                     value={ct.operator}
                     onChange={(e) => {
                       const next = [...constraints];
@@ -129,14 +132,13 @@ export function SimplexPage() {
                     <option value=">=">&ge;</option>
                     <option value="=">=</option>
                   </select>
-                  <input
-                    className="input font-mono w-20"
-                    type="number"
+                  <NumberInput
+                    className="input w-16 shrink-0 px-1 text-center font-mono"
                     step="any"
                     value={ct.rhs}
-                    onChange={(e) => {
+                    onChange={(v) => {
                       const next = [...constraints];
-                      next[i].rhs = Number(e.target.value);
+                      next[i].rhs = v;
                       setConstraints(next);
                     }}
                   />
@@ -157,8 +159,8 @@ export function SimplexPage() {
           {data && (
             <div className="card">
               <h3 className="font-semibold mb-2">Solución óptima</h3>
-              {data.result.unbounded ? (
-                <p className="text-rose-700">Problema no acotado.</p>
+              {data.result.unbounded || data.result.infeasible ? (
+                <p className="text-rose-700">{data.message ?? (data.result.unbounded ? 'Problema no acotado.' : 'Problema infactible.')}</p>
               ) : (
                 <>
                   <p><strong>Z = </strong><span className="font-mono">{data.result.z}</span></p>
@@ -175,6 +177,8 @@ export function SimplexPage() {
               basis={data.steps[stepIdx].state.basis as number[] | undefined}
               pivotRow={data.steps[stepIdx].state.pivotRow as number | undefined}
               pivotCol={data.steps[stepIdx].state.pivotCol as number | undefined}
+              varNames={data.steps[stepIdx].state.varNames as string[] | undefined}
+              objectiveLabel={data.steps[stepIdx].state.phase === 1 ? 'W' : 'Z'}
             />
           )}
         </div>
@@ -184,7 +188,12 @@ export function SimplexPage() {
         <div className="space-y-6">
           <StepPlayer total={data.steps.length} index={stepIdx} onChange={setStepIdx} />
           <div className="card">
-            <p className="text-sm text-slate-700">{data.steps[stepIdx]?.explanation}</p>
+            <p className="text-sm text-slate-700"><MathText text={data.steps[stepIdx]?.explanation} /></p>
+            {data.steps[stepIdx]?.latex && (
+              <div className="mt-2 text-center">
+                <KaTeXBlock tex={data.steps[stepIdx].latex!} />
+              </div>
+            )}
           </div>
           <Tabs
             tabs={[
@@ -195,7 +204,9 @@ export function SimplexPage() {
                   <div className="space-y-3">
                     {data.steps.map((s, i) => (
                       <div key={i}>
-                        <p className="text-sm text-slate-600 mb-1">Iteración {s.iteration}</p>
+                        <p className="text-sm text-slate-600 mb-1">
+                          {s.state.phase ? `Fase ${s.state.phase} · ` : ''}Paso {s.iteration}
+                        </p>
                         <TableauView
                           flat={s.state.tableau as number[]}
                           rows={s.state.rows as number}
@@ -203,6 +214,8 @@ export function SimplexPage() {
                           basis={s.state.basis as number[] | undefined}
                           pivotRow={s.state.pivotRow as number | undefined}
                           pivotCol={s.state.pivotCol as number | undefined}
+                          varNames={s.state.varNames as string[] | undefined}
+                          objectiveLabel={s.state.phase === 1 ? 'W' : 'Z'}
                         />
                       </div>
                     ))}

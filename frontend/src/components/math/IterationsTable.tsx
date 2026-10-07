@@ -1,3 +1,6 @@
+import { KaTeXBlock } from './KaTeXBlock';
+import { columnLabel, type MethodKey } from '@/lib/columnLabels';
+
 interface Step {
   iteration: number;
   state: Record<string, any>;
@@ -6,11 +9,13 @@ interface Step {
 
 interface Props {
   steps: Step[];
+  /** Método al que pertenecen los pasos; define la notación de cada columna. */
+  method?: MethodKey;
   highlightIndex?: number;
   onRowClick?: (i: number) => void;
 }
 
-export function IterationsTable({ steps, highlightIndex, onRowClick }: Props) {
+export function IterationsTable({ steps, method, highlightIndex, onRowClick }: Props) {
   if (steps.length === 0) return null;
 
   // Recolectar todas las claves relevantes (excluir arrays grandes)
@@ -21,7 +26,7 @@ export function IterationsTable({ steps, highlightIndex, onRowClick }: Props) {
       if (typeof v === 'number' || typeof v === 'string') cols.add(k);
     }
   }
-  const columns = Array.from(cols);
+  const columns = Array.from(cols).map((key) => ({ key, ...columnLabel(method, key) }));
 
   return (
     <div className="overflow-x-auto card">
@@ -30,7 +35,9 @@ export function IterationsTable({ steps, highlightIndex, onRowClick }: Props) {
           <tr>
             <th>#</th>
             {columns.map((c) => (
-              <th key={c} className="font-mono">{c}</th>
+              <th key={c.key} title={c.desc} className="whitespace-nowrap">
+                <KaTeXBlock tex={c.tex} displayMode={false} />
+              </th>
             ))}
           </tr>
         </thead>
@@ -43,9 +50,9 @@ export function IterationsTable({ steps, highlightIndex, onRowClick }: Props) {
             >
               <td className="font-medium">{s.iteration}</td>
               {columns.map((c) => {
-                const v = s.state[c];
+                const v = s.state[c.key];
                 return (
-                  <td key={c} className="font-mono">
+                  <td key={c.key} className="font-mono">
                     {typeof v === 'number' ? v.toFixed(6) : String(v ?? '')}
                   </td>
                 );
@@ -54,6 +61,28 @@ export function IterationsTable({ steps, highlightIndex, onRowClick }: Props) {
           ))}
         </tbody>
       </table>
+
+      {/* Leyenda: qué es cada columna y de qué fórmula proviene */}
+      <dl className="mt-4 border-t border-slate-200 pt-3 grid gap-x-6 gap-y-1.5 sm:grid-cols-2 text-sm text-slate-600">
+        {columns
+          .filter((c) => c.desc)
+          .map((c) => (
+            <div key={c.key} className="flex flex-wrap items-baseline gap-x-2">
+              <dt className="font-medium text-slate-800">
+                <KaTeXBlock tex={c.tex} displayMode={false} />
+              </dt>
+              <dd>
+                {c.desc}
+                {c.formula && (
+                  <>
+                    {': '}
+                    <KaTeXBlock tex={c.formula} displayMode={false} />
+                  </>
+                )}
+              </dd>
+            </div>
+          ))}
+      </dl>
     </div>
   );
 }

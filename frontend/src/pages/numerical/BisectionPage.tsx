@@ -5,9 +5,11 @@ import { FunctionPlot } from '@/components/math/FunctionPlot';
 import { IterationsTable } from '@/components/math/IterationsTable';
 import { StepPlayer } from '@/components/math/StepPlayer';
 import { KaTeXBlock } from '@/components/math/KaTeXBlock';
+import { MathText } from '@/components/math/MathText';
 import { FeedbackPanel } from '@/components/feedback/FeedbackPanel';
 import { StepInputForm } from '@/components/feedback/StepInputForm';
 import { saveAttempt, useSolver, useValidator } from '@/hooks/useSolver';
+import { NumberInput } from '@/components/math/NumberInput';
 
 export function BisectionPage() {
   const [fn, setFn] = useState('x^3 - x - 2');
@@ -57,16 +59,16 @@ export function BisectionPage() {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="label">a</label>
-                <input className="input" type="number" step="any" value={a} onChange={(e) => setA(Number(e.target.value))} />
+                <NumberInput className="input" step="any" value={a} onChange={(v) => setA(v)} />
               </div>
               <div>
                 <label className="label">b</label>
-                <input className="input" type="number" step="any" value={b} onChange={(e) => setB(Number(e.target.value))} />
+                <NumberInput className="input" step="any" value={b} onChange={(v) => setB(v)} />
               </div>
             </div>
             <div>
               <label className="label">Tolerancia</label>
-              <input className="input" type="number" step="any" value={tol} onChange={(e) => setTol(Number(e.target.value))} />
+              <NumberInput className="input" step="any" value={tol} onChange={(v) => setTol(v)} />
             </div>
             <button className="btn-primary w-full" onClick={onSolve} disabled={loading}>
               {loading ? 'Resolviendo...' : 'Resolver automáticamente'}
@@ -91,7 +93,7 @@ export function BisectionPage() {
           <StepPlayer total={data.steps.length} index={stepIdx} onChange={setStepIdx} />
 
           <div className="card">
-            <p className="text-sm text-slate-700">{data.steps[stepIdx]?.explanation}</p>
+            <p className="text-sm text-slate-700"><MathText text={data.steps[stepIdx]?.explanation} /></p>
             {data.steps[stepIdx]?.latex && (
               <div className="mt-2 text-center">
                 <KaTeXBlock tex={data.steps[stepIdx].latex!} />
@@ -104,7 +106,7 @@ export function BisectionPage() {
               {
                 id: 'auto',
                 label: 'Resultado paso a paso',
-                content: <IterationsTable steps={data.steps} highlightIndex={stepIdx} onRowClick={setStepIdx} />,
+                content: <IterationsTable steps={data.steps} method="bisection" highlightIndex={stepIdx} onRowClick={setStepIdx} />,
               },
               {
                 id: 'practice',
@@ -123,6 +125,7 @@ export function BisectionPage() {
                       loading={validator.loading}
                     />
                     {validator.data && <FeedbackPanel {...validator.data} />}
+                    {validator.error && <p className="text-sm text-rose-700">{validator.error}</p>}
                   </div>
                 ),
               },

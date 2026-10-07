@@ -2,7 +2,10 @@ import { useState } from 'react';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Tabs } from '@/components/layout/Tabs';
 import { StepPlayer } from '@/components/math/StepPlayer';
+import { KaTeXBlock } from '@/components/math/KaTeXBlock';
+import { MathText } from '@/components/math/MathText';
 import { saveAttempt, useSolver } from '@/hooks/useSolver';
+import { NumberInput } from '@/components/math/NumberInput';
 
 export function AssignmentPage() {
   const [n, setN] = useState(3);
@@ -16,6 +19,8 @@ export function AssignmentPage() {
   const { data, loading, error, solve } = useSolver('/operations/assignment');
 
   const resize = (newN: number) => {
+  // Mientras el campo está vacío o fuera de rango se conserva la matriz actual.
+    if (!Number.isInteger(newN) || newN < 2 || newN > 8) return;
     setN(newN);
     setCosts((prev) => {
       const out: number[][] = [];
@@ -49,7 +54,7 @@ export function AssignmentPage() {
         <div className="flex gap-3 items-end mb-4">
           <div>
             <label className="label">Tamaño n</label>
-            <input className="input w-20" type="number" min={2} max={8} value={n} onChange={(e) => resize(Number(e.target.value))} />
+            <NumberInput className="input w-20" min={2} max={8} value={n} onChange={(v) => resize(v)} />
           </div>
           <label className="flex items-center gap-2 text-sm">
             <input type="checkbox" checked={maximize} onChange={(e) => setMaximize(e.target.checked)} />
@@ -74,14 +79,13 @@ export function AssignmentPage() {
                 <td className="font-medium">T{i + 1}</td>
                 {row.map((v, j) => (
                   <td key={j}>
-                    <input
+                    <NumberInput
                       className="input font-mono w-16"
-                      type="number"
                       step="any"
                       value={v}
-                      onChange={(e) => {
+                      onChange={(v) => {
                         const next = costs.map((r) => [...r]);
-                        next[i][j] = Number(e.target.value);
+                        next[i][j] = v;
                         setCosts(next);
                       }}
                     />
@@ -107,7 +111,12 @@ export function AssignmentPage() {
 
           <StepPlayer total={data.steps.length} index={stepIdx} onChange={setStepIdx} />
           <div className="card">
-            <p className="text-sm text-slate-700">{data.steps[stepIdx]?.explanation}</p>
+            <p className="text-sm text-slate-700"><MathText text={data.steps[stepIdx]?.explanation} /></p>
+            {data.steps[stepIdx]?.latex && (
+              <div className="mt-2 text-center">
+                <KaTeXBlock tex={data.steps[stepIdx].latex!} />
+              </div>
+            )}
           </div>
 
           <Tabs
@@ -128,7 +137,7 @@ export function AssignmentPage() {
                         {data.steps.map((s, i) => (
                           <tr key={i} className={stepIdx === i ? 'bg-brand-50' : ''}>
                             <td>{s.iteration}</td>
-                            <td className="text-sm">{s.explanation}</td>
+                            <td className="text-sm"><MathText text={s.explanation} /></td>
                           </tr>
                         ))}
                       </tbody>
