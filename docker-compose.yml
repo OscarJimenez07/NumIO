@@ -33,6 +33,22 @@ services:
       PORT: 3000
       NODE_ENV: production
       SWAGGER_ENABLED: ${SWAGGER_ENABLED:-false}
+      # Entra ID. Vacías = ingreso solo con correo y contraseña.
+      MS_TENANT_ID: ${MS_TENANT_ID:-}
+      MS_CLIENT_ID: ${MS_CLIENT_ID:-}
+      MS_ALLOWED_DOMAINS: ${MS_ALLOWED_DOMAINS:-}
+      PERMITIR_CONTRASENA: ${PERMITIR_CONTRASENA:-true}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      CORREO_REMITENTE: ${CORREO_REMITENTE:-}
+      # Sin SMTP, el código de ingreso se escribe en el registro del backend.
+      CODIGO_EN_CONSOLA: "true"
+      ADMIN_EMAILS: ${ADMIN_EMAILS:-}
+      DOCENTE_EMAILS: ${DOCENTE_EMAILS:-}
+      # Cuentas demo con contraseña conocida: solo en desarrollo.
+      SEED_USUARIOS_DEMO: "true"
     ports:
       - "3000:3000"
     command: sh -c "npx prisma db push --accept-data-loss --skip-generate && (npx prisma db seed || echo 'seed failed, continuing') && node dist/src/main.js"
@@ -42,7 +58,9 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        VITE_API_URL: ${VITE_API_URL:-http://localhost:3000}
+        # Ruta relativa: nginx enruta /api al backend, de modo que la
+        # interfaz sirve por cualquier dirección sin recompilar.
+        VITE_API_URL: ${VITE_API_URL:-/api}
     container_name: numio-frontend
     restart: unless-stopped
     depends_on:

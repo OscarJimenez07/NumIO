@@ -22,9 +22,10 @@ Tras unos minutos verás:
 
 El servicio backend ejecuta automáticamente:
 1. `prisma migrate deploy` — crea las tablas si no existen.
-2. `prisma db seed` — inserta los 10 métodos y los 3 usuarios demo.
+2. `prisma db seed` — inserta los 10 métodos y, **solo en desarrollo**
+   (`SEED_USUARIOS_DEMO=true`), los 3 usuarios demo. En producción no se crean.
 
-Credenciales demo:
+Credenciales demo (solo entorno local):
 | Rol | Email | Password |
 |-----|-------|----------|
 | ADMIN | admin@uts.edu.co | Admin123! |

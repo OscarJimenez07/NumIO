@@ -10,6 +10,7 @@
     "lint": "eslint . --ext ts,tsx --fix"
   },
   "dependencies": {
+    "@azure/msal-browser": "^5.21.0",
     "axios": "^1.6.7",
     "katex": "^0.16.9",
     "mathjs": "^12.3.0",

@@ -9,6 +9,9 @@ COPY package*.json ./
 RUN npm install
 
 COPY . .
+# Node fija su techo de memoria segun la RAM fisica e ignora el intercambio: en
+# un servidor de 1 GB tsc + vite se quedan sin heap. Se sube solo para compilar.
+ENV NODE_OPTIONS=--max-old-space-size=2560
 RUN npm run build
 
 # ===== Runtime: nginx =====

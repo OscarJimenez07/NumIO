@@ -1,0 +1,95 @@
+# Despliegue en internet.
+#
+# Se usa SOLO con -f, para que no se mezcle con docker-compose.override.yml:
+#
+#   docker compose -f docker-compose.prod.yml up -d --build
+#
+# Diferencias con el compose de desarrollo, todas deliberadas:
+#
+#   · La base de datos y la API NO se publican al exterior. Solo hablan entre
+#     ellas por la red interna. Un PostgreSQL abierto a internet se encuentra
+#     y se compromete en cuestión de horas.
+#   · Caddy queda delante y obtiene el certificado HTTPS automáticamente.
+#   · Las claves no tienen valor por defecto: si faltan, el arranque se detiene
+#     con un mensaje. Es intencional — más vale no levantar que levantar con
+#     la contraseña de ejemplo.
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: numio-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?falta POSTGRES_USER en .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?falta POSTGRES_PASSWORD en .env}
+      POSTGRES_DB: ${POSTGRES_DB:?falta POSTGRES_DB en .env}
+    volumes:
+      - dbdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: numio-backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      JWT_SECRET: ${JWT_SECRET:?falta JWT_SECRET en .env}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-1d}
+      PORT: 3000
+      NODE_ENV: production
+      SWAGGER_ENABLED: ${SWAGGER_ENABLED:-false}
+      MS_TENANT_ID: ${MS_TENANT_ID:-}
+      MS_CLIENT_ID: ${MS_CLIENT_ID:-}
+      MS_ALLOWED_DOMAINS: ${MS_ALLOWED_DOMAINS:-}
+      PERMITIR_CONTRASENA: ${PERMITIR_CONTRASENA:-false}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      CORREO_REMITENTE: ${CORREO_REMITENTE:-}
+      ADMIN_EMAILS: ${ADMIN_EMAILS:-}
+      DOCENTE_EMAILS: ${DOCENTE_EMAILS:-}
+    command: sh -c "npx prisma db push --accept-data-loss --skip-generate && (npx prisma db seed || echo 'seed omitido') && node dist/src/main.js"
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: /api
+    container_name: numio-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+
+  # Puerta de entrada: es lo único accesible desde internet. Pide y renueva
+  # el certificado de Let's Encrypt sin intervención.
+  caddy:
+    image: caddy:2-alpine
+    container_name: numio-caddy
+    restart: unless-stopped
+    depends_on:
+      - frontend
+    environment:
+      DOMINIO: ${DOMINIO:?falta DOMINIO en .env (usa :80 si aún no tienes dominio)}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  dbdata:
+  caddy_data:
+  caddy_config:

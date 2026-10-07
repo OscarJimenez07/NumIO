@@ -1,0 +1,32 @@
+# Puerta de entrada de NumIO.
+#
+# El valor de DOMINIO sale del archivo .env:
+#   · Con dominio real   ->  DOMINIO=numio.uts.edu.co
+#     Caddy pide el certificado a Let's Encrypt y sirve por HTTPS solo.
+#   · Sin dominio aún    ->  DOMINIO=:80
+#     Sirve por HTTP contra la IP del servidor. Suficiente para probar, pero
+#     el ingreso con la cuenta institucional exige HTTPS.
+
+{$DOMINIO} {
+	encode zstd gzip
+
+	# Toda la aplicación la sirve el contenedor del frontend, que a su vez
+	# enruta /api hacia el backend por la red interna.
+	reverse_proxy frontend:80
+
+	header {
+		# El navegador respeta el tipo declarado y no intenta adivinarlo.
+		X-Content-Type-Options nosniff
+		# La página no puede incrustarse en un marco ajeno.
+		X-Frame-Options DENY
+		Referrer-Policy strict-origin-when-cross-origin
+		-Server
+	}
+
+	log {
+		output file /data/acceso.log {
+			roll_size 10MB
+			roll_keep 5
+		}
+	}
+}

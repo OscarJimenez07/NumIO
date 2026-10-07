@@ -1,0 +1,7 @@
+# Override local: el puerto 5432 del host ya está ocupado por otro PostgreSQL.
+# El backend sigue conectándose a db:5432 por la red interna de Docker; esto
+# solo cambia el puerto por el que TÚ puedes inspeccionar la BD desde el host.
+services:
+  db:
+    ports:
+      - "5434:5432"

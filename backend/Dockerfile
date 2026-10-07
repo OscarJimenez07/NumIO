@@ -15,7 +15,9 @@ RUN npm install
 COPY src ./src
 
 RUN npx prisma generate
-RUN npm run build
+# Mismo motivo que en el frontend: en 1 GB de RAM el compilador necesita un
+# techo de memoria mayor que el que Node calcula solo.
+RUN NODE_OPTIONS=--max-old-space-size=2560 npm run build
 
 # ===== Runtime stage =====
 FROM node:20-alpine AS runtime
