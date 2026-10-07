@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { TestResultDto, SusResponseDto } from './dto/test-result.dto';
+import { puntajeSus } from '../opinion/opinion.cuestionario';
 
 @Injectable()
 export class PilotService {
@@ -30,11 +31,7 @@ export class PilotService {
     if (dto.answers.some((v) => v < 1 || v > 5)) {
       throw new BadRequestException('Las respuestas deben estar entre 1 y 5.');
     }
-    let sum = 0;
-    for (let i = 0; i < 10; i++) {
-      sum += i % 2 === 0 ? dto.answers[i] - 1 : 5 - dto.answers[i];
-    }
-    const score = sum * 2.5;
+    const score = puntajeSus(dto.answers);
     return this.prisma.susResponse.create({
       data: { userId, answers: dto.answers, score },
     });

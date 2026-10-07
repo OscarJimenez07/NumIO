@@ -76,7 +76,7 @@ export function ResultsDashboard() {
         </div>
         <table className="table-clean">
           <thead>
-            <tr><th>Fecha</th><th>Estudiante</th><th>Tipo</th><th>Score</th></tr>
+            <tr><th>Fecha</th><th>Estudiante</th><th>Tipo</th><th>Puntaje</th></tr>
           </thead>
           <tbody>
             {data.tests.slice(0, 50).map((t) => (
@@ -84,7 +84,7 @@ export function ResultsDashboard() {
                 <td>{new Date(t.createdAt).toLocaleString()}</td>
                 <td>{t.user?.fullName}</td>
                 <td>{t.testType}</td>
-                <td className="font-mono">{t.score}</td>
+                <td className="font-mono">{Math.round(t.score * 100) / 100}</td>
               </tr>
             ))}
           </tbody>
@@ -93,7 +93,7 @@ export function ResultsDashboard() {
 
       <div className="card">
         <div className="flex items-center justify-between mb-2">
-          <h3 className="font-semibold">Encuesta SUS</h3>
+          <h3 className="font-semibold">Encuesta SUS <span className="font-normal text-slate-500 text-sm">(se responde dentro de la encuesta de opinión)</span></h3>
           <button
             className="btn-secondary text-xs"
             onClick={() => exportCsv(data.sus, 'sus.csv', (r) => ({
@@ -108,14 +108,14 @@ export function ResultsDashboard() {
         </div>
         <table className="table-clean">
           <thead>
-            <tr><th>Fecha</th><th>Estudiante</th><th>Score</th></tr>
+            <tr><th>Fecha</th><th>Estudiante</th><th>Puntaje</th></tr>
           </thead>
           <tbody>
             {data.sus.slice(0, 50).map((s) => (
               <tr key={s.id}>
                 <td>{new Date(s.createdAt).toLocaleString()}</td>
                 <td>{s.user?.fullName}</td>
-                <td className="font-mono">{s.score}</td>
+                <td className="font-mono">{Math.round(s.score * 100) / 100}</td>
               </tr>
             ))}
           </tbody>
