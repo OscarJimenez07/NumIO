@@ -27,15 +27,52 @@ enum TestType {
 model User {
   id           String        @id @default(cuid())
   email        String        @unique
-  passwordHash String
+  // Opcional: quien entra con la cuenta institucional no tiene contraseña
+  // propia en la plataforma; su identidad la respalda Microsoft.
+  passwordHash String?
+  // true tras un restablecimiento hecho por el docente: la contraseña es
+  // temporal y la persona debe cambiarla al entrar.
+  mustChangePassword Boolean @default(false)
+  // Las sesiones abiertas antes de esta fecha dejan de valer.
+  passwordChangedAt  DateTime?
   fullName     String
   role         Role          @default(STUDENT)
+
+  // Identidad institucional. microsoftOid es el identificador estable que
+  // emite Entra ID: no cambia aunque la persona cambie de correo.
+  provider     AuthProvider  @default(LOCAL)
+  microsoftOid String?       @unique
+
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
 
   attempts     Attempt[]
   testResults  TestResult[]
   susResponses SusResponse[]
+  opinion      OpinionResponse?
+}
+
+enum AuthProvider {
+  LOCAL
+  MICROSOFT
+  CODIGO
+}
+
+// Códigos de un solo uso enviados al correo institucional para ingresar sin
+// contraseña. Nunca se guarda el código: solo su HMAC.
+model LoginCode {
+  id        String    @id @default(cuid())
+  email     String
+  // INGRESO: entrar sin contraseña. CONTRASENA: restablecer la contraseña.
+  // Un código de un propósito no sirve para el otro.
+  purpose   String    @default("INGRESO")
+  codeHash  String
+  attempts  Int       @default(0)
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([email, createdAt])
 }
 
 model Method {
@@ -85,4 +122,28 @@ model SusResponse {
   createdAt DateTime @default(now())
 
   @@index([userId])
+}
+
+// Encuesta de opinión sobre la plataforma (percepción de utilidad y
+// satisfacción). Una respuesta por estudiante; si vuelve a enviarla, se
+// actualiza. El docente solo ve resultados agregados, sin nombres.
+model OpinionResponse {
+  id             String   @id @default(cuid())
+  userId         String   @unique
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // { U1: 4, U2: 5, ... } escala Likert 1-5
+  answers        Json
+  // 0 a 10: probabilidad de recomendar la plataforma
+  recommendation Int
+  frequency      String
+  // slugs de los módulos que le resultaron más útiles
+  modules        Json
+  mostUseful     String?
+  improvements   String?
+  // Las 10 respuestas de la escala SUS (1-5) y su puntaje (0-100). Cada envío
+  // también se registra en SusResponse, que alimenta «Resultados piloto».
+  susAnswers     Json?
+  susScore       Float?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 }

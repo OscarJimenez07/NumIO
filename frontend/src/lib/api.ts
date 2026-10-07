@@ -1,7 +1,9 @@
 import axios, { AxiosError } from 'axios';
 import { useAuthStore } from './auth';
 
-const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+// Ruta relativa: nginx enruta /api hacia el backend, de modo que la
+// interfaz funciona por cualquier dirección sin recompilar.
+const baseURL = import.meta.env.VITE_API_URL || '/api';
 
 export const api = axios.create({ baseURL });
 

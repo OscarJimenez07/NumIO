@@ -30,6 +30,14 @@ async function main() {
     });
   }
 
+  // Las cuentas demo tienen contraseñas publicadas en la documentación: solo se
+  // crean en desarrollo (SEED_USUARIOS_DEMO=true), nunca en el servidor.
+  if (process.env.SEED_USUARIOS_DEMO !== 'true') {
+    console.log('Cuentas demo omitidas (SEED_USUARIOS_DEMO no es true).');
+    console.log('Seed completed.');
+    return;
+  }
+
   console.log('Seeding admin user...');
   const adminEmail = 'admin@uts.edu.co';
   const passwordHash = await bcrypt.hash('Admin123!', 10);

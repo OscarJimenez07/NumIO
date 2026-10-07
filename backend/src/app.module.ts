@@ -8,6 +8,7 @@ import { OperationsModule } from './operations/operations.module';
 import { AttemptsModule } from './attempts/attempts.module';
 import { FeedbackModule } from './feedback/feedback.module';
 import { PilotModule } from './pilot/pilot.module';
+import { OpinionModule } from './opinion/opinion.module';
 import { HealthController } from './health.controller';
 
 @Module({
@@ -21,6 +22,7 @@ import { HealthController } from './health.controller';
     OperationsModule,
     AttemptsModule,
     PilotModule,
+    OpinionModule,
   ],
   controllers: [HealthController],
 })
