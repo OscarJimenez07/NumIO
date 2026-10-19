@@ -69,23 +69,48 @@ npm install
 npm run dev
 ```
 
-## Despliegue en producción (cloud)
+## Despliegue en producción (Azure)
 
-Recomendaciones:
-1. Servir backend tras un reverse proxy con HTTPS (Nginx, Caddy, Cloudflare Tunnel).
-2. Usar Postgres administrado (Render, Supabase, Neon, RDS).
-3. Variables de entorno mínimas en producción:
-   - `DATABASE_URL` (con SSL)
-   - `JWT_SECRET` (string aleatorio largo, mínimo 32 chars)
-   - `JWT_EXPIRES_IN` (p.ej. `8h`)
-4. Construir el frontend con `VITE_API_URL` apuntando al dominio público del backend.
+La plataforma de la prueba piloto está en una máquina virtual de **Azure for Students** (Ubuntu 24.04) y se publica en https://numio.mexicocentral.cloudapp.azure.com. La guía paso a paso (crear la máquina, instalar Docker, configurar el dominio y Entra ID) está en `despliegue/GUIA-DESPLIEGUE.md`.
 
-Ejemplo build prod del frontend con dominio personalizado:
+Resumen:
+1. Crear el servidor (`despliegue/crear-servidor-azure.sh` o desde el portal) e instalar Docker (`despliegue/instalar-servidor.sh`).
+2. Llenar `despliegue/.env.produccion` (no se sube al repositorio).
+3. Publicar o actualizar con:
+   ```bash
+   ./despliegue/publicar.sh usuario@ip-del-servidor
+   ```
+   que sube el código y en el servidor ejecuta `docker compose -f docker-compose.prod.yml up -d --build`.
+
+`docker-compose.prod.yml` difiere del local en que:
+- Caddy queda adelante y pide el certificado HTTPS a Let's Encrypt automáticamente.
+- La base de datos y la API no publican puertos: solo se comunican por la red interna de Docker.
+- Las claves no tienen valor por defecto; si falta alguna, el arranque se detiene.
+- No se crean usuarios demo.
+
+Variables principales del `.env` de producción:
+
+| Variable | Uso |
+|----------|-----|
+| `DOMINIO` | Dominio público (Caddy pide el certificado para él) |
+| `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB` | Base de datos |
+| `JWT_SECRET`, `JWT_EXPIRES_IN` | Firma y duración de la sesión |
+| `MS_TENANT_ID`, `MS_CLIENT_ID`, `MS_ALLOWED_DOMAINS` | Ingreso con Microsoft Entra ID y dominios de correo permitidos |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `CORREO_REMITENTE` | Envío de los códigos de ingreso por correo |
+| `PERMITIR_CONTRASENA` | `false` deja solo el ingreso con Microsoft y con código |
+| `ADMIN_EMAILS`, `DOCENTE_EMAILS` | Correos que reciben el rol de administrador o docente al ingresar |
+| `SWAGGER_ENABLED` | `true` publica la documentación en `/api/docs` |
+
+## Verificación funcional (`validar.py`)
+
 ```bash
-cd frontend
-VITE_API_URL=https://api.numio.uts.edu.co npm run build
-# Subir dist/ a un CDN o nginx
+docker compose up -d
+python validar.py            # contra http://localhost:8080
 ```
+
+El guion revisa los diez métodos contra los casos de la bibliografía, el modo de práctica, las validaciones de entrada, los permisos por rol y que el cuestionario del piloto no entregue la clave de respuestas.
+
+**Cuidado:** usa las cuentas demo y, al terminar, borra con `docker exec numio-db psql` **todos** los registros de `TestResult`, `SusResponse`, `Attempt` y `OpinionResponse`, no solo los que creó. Por eso se corre contra una instalación local o una copia de la base, nunca en el servidor de producción con los datos del piloto. Si hay que hacerlo, primero se saca el respaldo de la sección siguiente.
 
 ## Backups
 
