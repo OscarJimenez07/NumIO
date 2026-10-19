@@ -28,7 +28,6 @@ export function LagrangePage() {
     const r = await solve({ points, evalAt });
     if (r) {
       setStepIdx(0);
-      saveAttempt({ methodSlug: 'lagrange', input: { points, evalAt }, steps: r.steps, isCorrect: true });
     }
   };
 

@@ -5,7 +5,9 @@ import { TableauView } from '@/components/math/TableauView';
 import { StepPlayer } from '@/components/math/StepPlayer';
 import { KaTeXBlock } from '@/components/math/KaTeXBlock';
 import { MathText } from '@/components/math/MathText';
-import { saveAttempt, useSolver } from '@/hooks/useSolver';
+import { FeedbackPanel } from '@/components/feedback/FeedbackPanel';
+import { StepInputForm } from '@/components/feedback/StepInputForm';
+import { saveAttempt, useSolver, useValidator } from '@/hooks/useSolver';
 import { NumberInput } from '@/components/math/NumberInput';
 
 interface Constraint { coefficients: number[]; operator: '<=' | '>=' | '='; rhs: number; }
@@ -21,6 +23,7 @@ export function SimplexPage() {
   const [stepIdx, setStepIdx] = useState(0);
 
   const { data, loading, error, solve } = useSolver('/operations/simplex');
+  const validator = useValidator('/operations/simplex');
 
   const numVars = c.length;
 
@@ -50,9 +53,18 @@ export function SimplexPage() {
     const r = await solve({ objective, c, constraints });
     if (r) {
       setStepIdx(0);
-      saveAttempt({ methodSlug: 'simplex', input: { objective, c, constraints }, steps: r.steps, isCorrect: !r.result.unbounded && !r.result.infeasible });
     }
   };
+
+  const validateSteps = async (userSteps: any[]) => {
+    const r = await validator.validate({ objective, c, constraints, userSteps });
+    if (r) {
+      saveAttempt({ methodSlug: 'simplex', input: { objective, c, constraints }, steps: data?.steps ?? [], userSteps, feedback: r.feedback, isCorrect: r.isCorrect });
+    }
+  };
+
+  // Cada pivoteo (de cualquier fase) es una fila de la práctica.
+  const pivoteos = data ? data.steps.filter((s) => s.state.pivotRow !== undefined).length : 0;
 
   return (
     <div>
@@ -221,6 +233,34 @@ export function SimplexPage() {
                     ))}
                   </div>
                 ),
+              },
+              {
+                id: 'practice',
+                label: 'Practicar',
+                content:
+                  pivoteos === 0 ? (
+                    <div className="card text-sm text-slate-600">
+                      La tabla inicial ya es óptima: no hay pivoteos que practicar con este modelo.
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <StepInputForm
+                        key={data.steps.length}
+                        numIterations={pivoteos}
+                        description="Por cada pivoteo ingresa la variable que entra y la que sale (p. ej. x1, s2, a1), el elemento pivote antes de dividir y el valor del objetivo después de pivotear (W en la fase 1, Z en la fase 2)."
+                        fields={[
+                          { key: 'entra', label: '\\text{Entra}', type: 'text', placeholder: 'x1' },
+                          { key: 'sale', label: '\\text{Sale}', type: 'text', placeholder: 's1' },
+                          { key: 'pivote', label: '\\text{Pivote}' },
+                          { key: 'z', label: 'Z \\text{ (o } W)' },
+                        ]}
+                        onSubmit={validateSteps}
+                        loading={validator.loading}
+                      />
+                      {validator.data && <FeedbackPanel {...validator.data} />}
+                      {validator.error && <p className="text-sm text-rose-700">{validator.error}</p>}
+                    </div>
+                  ),
               },
             ]}
           />

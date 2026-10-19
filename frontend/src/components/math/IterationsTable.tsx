@@ -35,7 +35,7 @@ export function IterationsTable({ steps, method, highlightIndex, onRowClick }: P
           <tr>
             <th>#</th>
             {columns.map((c) => (
-              <th key={c.key} title={c.desc} className="whitespace-nowrap">
+              <th key={c.key} title={c.desc} className="whitespace-nowrap normal-case text-sm">
                 <KaTeXBlock tex={c.tex} displayMode={false} />
               </th>
             ))}

@@ -4,7 +4,9 @@ import { Tabs } from '@/components/layout/Tabs';
 import { StepPlayer } from '@/components/math/StepPlayer';
 import { KaTeXBlock } from '@/components/math/KaTeXBlock';
 import { MathText } from '@/components/math/MathText';
-import { saveAttempt, useSolver } from '@/hooks/useSolver';
+import { FeedbackPanel } from '@/components/feedback/FeedbackPanel';
+import { StepInputForm } from '@/components/feedback/StepInputForm';
+import { saveAttempt, useSolver, useValidator } from '@/hooks/useSolver';
 import { NumberInput } from '@/components/math/NumberInput';
 
 export function AssignmentPage() {
@@ -17,6 +19,7 @@ export function AssignmentPage() {
   const [maximize, setMaximize] = useState(false);
   const [stepIdx, setStepIdx] = useState(0);
   const { data, loading, error, solve } = useSolver('/operations/assignment');
+  const validator = useValidator('/operations/assignment');
 
   const resize = (newN: number) => {
   // Mientras el campo está vacío o fuera de rango se conserva la matriz actual.
@@ -37,7 +40,13 @@ export function AssignmentPage() {
     const r = await solve({ costs, maximize });
     if (r) {
       setStepIdx(0);
-      saveAttempt({ methodSlug: 'assignment', input: { costs, maximize }, steps: r.steps, isCorrect: true });
+    }
+  };
+
+  const validateSteps = async (userSteps: any[]) => {
+    const r = await validator.validate({ costs, maximize, userSteps });
+    if (r) {
+      saveAttempt({ methodSlug: 'assignment', input: { costs, maximize }, steps: data?.steps ?? [], userSteps, feedback: r.feedback, isCorrect: r.isCorrect });
     }
   };
 
@@ -142,6 +151,33 @@ export function AssignmentPage() {
                         ))}
                       </tbody>
                     </table>
+                  </div>
+                ),
+              },
+              {
+                id: 'practice',
+                label: 'Practicar',
+                content: (
+                  <div className="space-y-4">
+                    <StepInputForm
+                      key={data.steps.length}
+                      numIterations={data.result.n as number}
+                      rowLabel={(i) => `T${i + 1} / R${i + 1}`}
+                      description={
+                        (data.steps[0]?.iteration === 0 ? 'Primero convierte la matriz a costos (mayor valor − cada valor). ' : '') +
+                        'En la fila i ingresa el mínimo que se resta a la fila T_i (paso 1), el que se resta a la columna R_i (paso 2, 0 si ya tenía un cero), el recurso asignado a T_i y el costo total acumulado de T_1 a T_i con los valores originales (en la última fila, el total óptimo).'
+                      }
+                      fields={[
+                        { key: 'minFila', label: '\\min \\text{ fila } T_i' },
+                        { key: 'minColumna', label: '\\min \\text{ columna } R_i' },
+                        { key: 'recurso', label: '\\text{Recurso de } T_i' },
+                        { key: 'costoAcumulado', label: '\\text{Costo acumulado}' },
+                      ]}
+                      onSubmit={validateSteps}
+                      loading={validator.loading}
+                    />
+                    {validator.data && <FeedbackPanel {...validator.data} />}
+                    {validator.error && <p className="text-sm text-rose-700">{validator.error}</p>}
                   </div>
                 ),
               },

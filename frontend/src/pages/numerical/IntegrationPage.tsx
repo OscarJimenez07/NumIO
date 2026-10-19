@@ -32,7 +32,6 @@ export function IntegrationPage({ title, slug, description, defaultN = 4 }: Prop
     const r = await solve({ fn, a, b, n });
     if (r) {
       setStepIdx(0);
-      saveAttempt({ methodSlug: slug, input: { fn, a, b, n }, steps: r.steps, isCorrect: true });
     }
   };
 

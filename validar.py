@@ -13,8 +13,9 @@ Uso:
     python validar.py                      (contra http://localhost:8080)
     python validar.py http://192.168.1.50:8080
 
-No deja rastro: los registros que crea para probar el módulo piloto se
-eliminan al terminar.
+Al terminar vacía las tablas TestResult, SusResponse, Attempt y
+OpinionResponse (todas, no solo lo que creó). Úsese contra una instalación
+local o una copia de la base, nunca contra producción con datos reales.
 """
 
 import json
@@ -292,11 +293,18 @@ cod, d = pedir("/attempts/me", token=est)
 revisar("El estudiante consulta su historial", cod == 200 and isinstance(d, list) and len(d) >= 1,
         f"{len(d) if isinstance(d, list) else 0} intentos")
 
-cod, pre = pedir("/pilot/test", {"testType": "PRE", "score": 50,
-                                 "details": {"origen": "validar.py"}}, token=est)
-cod2, post = pedir("/pilot/test", {"testType": "POST", "score": 83.33,
-                                   "details": {"origen": "validar.py"}}, token=est)
-revisar("Se registran pre-test y pos-test", cod in (200, 201) and cod2 in (200, 201))
+cod, preg = pedir("/pilot/cuestionario", token=est)
+revisar("El cuestionario no expone la clave de respuestas",
+        cod == 200 and isinstance(preg, list) and len(preg) == 6 and all("correct" not in q for q in preg))
+
+# Clave: 1-b, 2-c, 3-b, 4-b, 5-b, 6-b. Tres aciertos = 50; cinco = 83,33.
+cod, pre = pedir("/pilot/test", {"testType": "PRE",
+                                 "answers": {"q1": 1, "q2": 2, "q3": 1, "q4": 0, "q5": 0, "q6": 0}}, token=est)
+cod2, post = pedir("/pilot/test", {"testType": "POST",
+                                   "answers": {"q1": 1, "q2": 2, "q3": 1, "q4": 1, "q5": 1, "q6": 0}}, token=est)
+revisar("El servidor califica el pre-test y el pos-test",
+        cod in (200, 201) and cod2 in (200, 201) and cerca(pre.get("score"), 50) and cerca(post.get("score"), 83.33),
+        f"pre {pre.get('score')}, pos {post.get('score')}")
 
 cod, sus = pedir("/pilot/sus", {"answers": [5, 1, 5, 1, 4, 2, 5, 1, 4, 2]}, token=est)
 revisar("La encuesta SUS puntúa correctamente", cod in (200, 201) and cerca(sus.get("score"), 90),

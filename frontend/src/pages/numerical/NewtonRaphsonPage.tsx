@@ -24,7 +24,6 @@ export function NewtonRaphsonPage() {
     const r = await solve({ fn, x0, tolerance: tol });
     if (r) {
       setStepIdx(0);
-      saveAttempt({ methodSlug: 'newton-raphson', input: { fn, x0, tolerance: tol }, steps: r.steps, isCorrect: r.result.converged });
     }
   };
 

@@ -2,20 +2,27 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { TestResultDto, SusResponseDto } from './dto/test-result.dto';
 import { puntajeSus } from '../opinion/opinion.cuestionario';
+import { calificar, preguntasPublicas } from './test.cuestionario';
 
 @Injectable()
 export class PilotService {
   constructor(private readonly prisma: PrismaService) {}
 
-  saveTest(userId: string, dto: TestResultDto) {
-    return this.prisma.testResult.create({
+  cuestionario() {
+    return preguntasPublicas();
+  }
+
+  async saveTest(userId: string, dto: TestResultDto) {
+    const { score, correct, total } = calificar(dto.answers ?? {});
+    const guardado = await this.prisma.testResult.create({
       data: {
         userId,
         testType: dto.testType,
-        score: dto.score,
-        details: dto.details,
+        score,
+        details: { answers: dto.answers, correct, total },
       },
     });
+    return { id: guardado.id, testType: guardado.testType, score: round(score), correct, total };
   }
 
   /**

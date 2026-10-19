@@ -110,4 +110,46 @@ describe('SimplexService', () => {
     expect(out.result.z).toBeCloseTo(2, 4);
     expect(out.result.x[0]).toBeCloseTo(2, 4);
   });
+  describe('validate (modo práctica)', () => {
+    // Iteración 1: entra x2, sale s2 (12/2 = 6 < 18/2 = 9), pivote 2, Z = 30.
+    // Iteración 2: entra x1, sale s3 (6/3 = 2 < 4/1 = 4), pivote 3, Z = 36.
+    const modelo = {
+      objective: SimplexObjective.MAX,
+      c: [3, 5],
+      constraints: [
+        { coefficients: [1, 0], operator: '<=' as const, rhs: 4 },
+        { coefficients: [0, 2], operator: '<=' as const, rhs: 12 },
+        { coefficients: [3, 2], operator: '<=' as const, rhs: 18 },
+      ],
+    };
+
+    it('acepta variable entrante, saliente, pivote y Z correctos (con «X_1» o «x₁»)', () => {
+      const out = service.validate(modelo, [
+        { iteration: 1, state: { entra: 'x2', sale: 's2', pivote: 2, z: 30 } },
+        { iteration: 2, state: { entra: 'X_1', sale: 's₃', pivote: 3, z: 36 } },
+      ]);
+      expect(out.isCorrect).toBe(true);
+      expect(out.matchedSteps).toBe(2);
+      expect(out.totalSteps).toBe(2);
+    });
+
+    it('señala la variable saliente y el pivote equivocados', () => {
+      const out = service.validate(modelo, [
+        { iteration: 1, state: { entra: 'x2', sale: 's3', pivote: 2, z: 30 } },
+        { iteration: 2, state: { entra: 'x1', sale: 's3', pivote: 1, z: 36 } },
+      ]);
+      expect(out.isCorrect).toBe(false);
+      expect(out.feedback.some((f) => f.stepIndex === 0 && f.field === 'sale')).toBe(true);
+      expect(out.feedback.some((f) => f.stepIndex === 1 && f.field === 'pivote')).toBe(true);
+    });
+
+    it('incluye los pivoteos de la fase 1 (objetivo W)', () => {
+      // min x1 + x2 s.a. x1 + x2 >= 2: la fase 1 hace entrar x1 por a1 (pivote 1, W = 0).
+      const out = service.validate(
+        { objective: SimplexObjective.MIN, c: [1, 1], constraints: [{ coefficients: [1, 1], operator: '>=', rhs: 2 }] },
+        [{ iteration: 1, state: { entra: 'x1', sale: 'a1', pivote: 1, z: 0 } }],
+      );
+      expect(out.isCorrect).toBe(true);
+    });
+  });
 });

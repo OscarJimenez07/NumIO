@@ -85,7 +85,7 @@ export class AuthService {
 
   async login(dto: LoginDto) {
     this.exigirContrasenaPermitida();
-    const user = await this.prisma.user.findUnique({ where: { email: dto.email.trim().toLowerCase() } });
+    const user = await this.buscarParaIngreso(dto.email);
     if (!user) throw new UnauthorizedException('Credenciales inválidas');
 
     if (!user.passwordHash) {
@@ -98,6 +98,23 @@ export class AuthService {
     if (!ok) throw new UnauthorizedException('Credenciales inválidas');
 
     return this.sesion(user);
+  }
+
+  /**
+   * Acepta el correo completo o solo el usuario (lo que va antes de la @), para
+   * no tener que escribir el dominio. Con el usuario se busca la cuenta cuyo
+   * correo empieza por «usuario@», sin suponer el dominio: así también sirve
+   * para correos como …@correo.uts.edu.co. Si el usuario coincide con más de
+   * una cuenta se pide el correo completo, en vez de elegir una al azar.
+   */
+  private async buscarParaIngreso(entrada: string) {
+    const texto = entrada.trim().toLowerCase();
+    if (texto.includes('@')) return this.prisma.user.findUnique({ where: { email: texto } });
+    const coincidencias = await this.prisma.user.findMany({ where: { email: { startsWith: `${texto}@` } }, take: 2 });
+    if (coincidencias.length > 1) {
+      throw new UnauthorizedException('Hay más de una cuenta con ese usuario: escribe el correo completo.');
+    }
+    return coincidencias[0] ?? null;
   }
 
   /**

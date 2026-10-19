@@ -115,7 +115,7 @@ export class TransportationModiService {
       const ui = u[bestI]!;
       const vj = v[bestJ]!;
       const cij = costs[bestI][bestJ];
-      const celda = (i: number, j: number) => `O${i + 1} → D${j + 1}`;
+      const celda = (i: number, j: number) => `F${i + 1} → D${j + 1}`;
       const ciclo = path.map(([i, j], k) => `${celda(i, j)} (${k % 2 === 0 ? '+' : '−'})`).join(', ');
 
       for (let k = 0; k < path.length; k++) {
@@ -155,7 +155,7 @@ export class TransportationModiService {
         latex: rejilla([
           ...trios(cuentasPot),
           ...trios(cuentasRed),
-          [[`\\text{Entra}`, `O_{${bestI + 1}} \\to D_{${bestJ + 1}} \\;\\text{(el más negativo: } ${round(cij)} - ${paren(ui)} - ${paren(vj)} = ${round(mostNegative)})`]],
+          [[`\\text{Entra}`, `F_{${bestI + 1}} \\to D_{${bestJ + 1}} \\;\\text{(el más negativo: } ${round(cij)} - ${paren(ui)} - ${paren(vj)} = ${round(mostNegative)})`]],
           [
             ['\\theta', `\\min(${enviosResta.map(round).join(', ')}) = ${round(theta)}`],
             ['\\Delta Z', `${round(mostNegative)} \\times ${round(theta)} = ${round(mostNegative * theta)}`],
@@ -237,8 +237,29 @@ export class TransportationModiService {
     return null;
   }
 
+  /**
+   * Modo práctica: una fila por asignación de Vogel con la celda (fila F_i,
+   * columna D_j), la cantidad enviada y el costo total acumulado hasta ese
+   * paso; en la última fila es el costo de la solución inicial. Las
+   * iteraciones MODI no se piden: su estado (ciclo, celda que entra) no es
+   * numérico por paso.
+   */
   validate(input: TransportationInputDto, userSteps: Step[]): FeedbackResult {
-    const expected = this.solve(input).steps;
+    const { costs, supply, demand } = input;
+    const pasos = this.vogel.buildInitial(costs, supply, demand).steps;
+    let acumulado = 0;
+    const expected: Step[] = pasos.map((p, k) => {
+      acumulado += p.state.contribution as number;
+      return {
+        iteration: k + 1,
+        state: {
+          fila: p.state.row as number,
+          columna: p.state.col as number,
+          cantidad: p.state.quantity as number,
+          costoAcumulado: round(acumulado),
+        },
+      };
+    });
     return this.feedback.compare(expected, userSteps);
   }
 }

@@ -342,10 +342,49 @@ export class SimplexService {
     };
   }
 
+  /**
+   * Modo práctica: una fila por pivoteo (incluidos los de la fase 1) con la
+   * variable que entra, la que sale, el elemento pivote (antes de dividir) y
+   * el valor del objetivo tras pivotear (W en la fase 1, Z en la fase 2). Se
+   * derivan de la tabla anterior a cada pivoteo, sin recalcular el algoritmo.
+   */
   validate(input: SimplexInputDto, userSteps: Step[]): FeedbackResult {
-    const expected = this.solve(input).steps;
-    return this.feedback.compare(expected, userSteps);
+    const pasos = this.solve(input).steps;
+    const expected: Step[] = [];
+    for (let k = 1; k < pasos.length; k++) {
+      const s = pasos[k].state;
+      if (s.pivotRow === undefined) continue;
+      const antes = pasos[k - 1].state;
+      const fila = s.pivotRow as number;
+      const col = s.pivotCol as number;
+      const nombres = antes.varNames as string[];
+      expected.push({
+        iteration: expected.length + 1,
+        state: {
+          entra: nombres[col],
+          sale: nombres[(antes.basis as number[])[fila]],
+          pivote: (antes.tableau as number[])[fila * (antes.cols as number) + col],
+          z: s.z,
+        },
+      });
+    }
+    // «X_1», «x₁» o «x 1» se aceptan como x1.
+    const usuario = (userSteps ?? []).map((u) => ({
+      ...u,
+      state: Object.fromEntries(
+        Object.entries(u.state ?? {}).map(([k, v]) => [k, typeof v === 'string' ? normalizarVariable(v) : v]),
+      ),
+    }));
+    return this.feedback.compare(expected, usuario);
   }
+}
+
+/** Escribe un nombre de variable como lo usa el tablero: «X_{1}», «x₁» → «x1». */
+function normalizarVariable(texto: string): string {
+  return texto
+    .toLowerCase()
+    .replace(/[₀-₉]/g, (d) => String(d.charCodeAt(0) - 0x2080))
+    .replace(/[\s_{}]/g, '');
 }
 
 function pivotear(tabla: number[][], fila: number, col: number) {

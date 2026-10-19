@@ -14,6 +14,11 @@ import { TestResultDto, SusResponseDto } from './dto/test-result.dto';
 export class PilotController {
   constructor(private readonly pilot: PilotService) {}
 
+  @Get('cuestionario')
+  cuestionario() {
+    return this.pilot.cuestionario();
+  }
+
   @Post('test')
   saveTest(@Req() req: any, @Body() dto: TestResultDto) {
     return this.pilot.saveTest(req.user.userId, dto);

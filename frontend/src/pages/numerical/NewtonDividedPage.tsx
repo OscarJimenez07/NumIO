@@ -7,7 +7,9 @@ import { StepPlayer } from '@/components/math/StepPlayer';
 import { KaTeXBlock } from '@/components/math/KaTeXBlock';
 import { MathText } from '@/components/math/MathText';
 import { PointsEditor } from '@/components/math/PointsEditor';
-import { saveAttempt, useSolver } from '@/hooks/useSolver';
+import { FeedbackPanel } from '@/components/feedback/FeedbackPanel';
+import { StepInputForm } from '@/components/feedback/StepInputForm';
+import { saveAttempt, useSolver, useValidator } from '@/hooks/useSolver';
 import { NumberInput } from '@/components/math/NumberInput';
 
 export function NewtonDividedPage() {
@@ -21,12 +23,19 @@ export function NewtonDividedPage() {
   const [stepIdx, setStepIdx] = useState(0);
 
   const { data, loading, error, solve } = useSolver('/numerical/newton-divided');
+  const validator = useValidator('/numerical/newton-divided');
 
   const onSolve = async () => {
     const r = await solve({ points, evalAt });
     if (r) {
       setStepIdx(0);
-      saveAttempt({ methodSlug: 'newton-divided', input: { points, evalAt }, steps: r.steps, isCorrect: true });
+    }
+  };
+
+  const validateSteps = async (userSteps: any[]) => {
+    const r = await validator.validate({ points, evalAt, userSteps });
+    if (r) {
+      saveAttempt({ methodSlug: 'newton-divided', input: { points, evalAt }, steps: data?.steps ?? [], userSteps, feedback: r.feedback, isCorrect: r.isCorrect });
     }
   };
 
@@ -97,6 +106,37 @@ export function NewtonDividedPage() {
                     {(data.result.coefficients as number[]).map((c, i) => (
                       <p key={i}>b_{i} = {c}</p>
                     ))}
+                  </div>
+                ),
+              },
+              {
+                id: 'practice',
+                label: 'Practicar',
+                content: (
+                  <div className="space-y-4">
+                    <StepInputForm
+                      key={data.steps.length}
+                      numIterations={(data.result.coefficients as number[]).length}
+                      rowLabel={(k) => `k = ${k}`}
+                      description={
+                        data.result.evaluatedValue !== undefined
+                          ? `En cada fila k ingresa el coeficiente b_k = f[x_0, …, x_k], el término T_k evaluado en x = ${data.result.evaluatedAt} y la suma T_0 + … + T_k (la última es P(x)).`
+                          : 'En cada fila k ingresa el coeficiente b_k = f[x_0, …, x_k].'
+                      }
+                      fields={[
+                        { key: 'coeficiente', label: 'b_k' },
+                        ...(data.result.evaluatedValue !== undefined
+                          ? [
+                              { key: 'termino', label: 'T_k' },
+                              { key: 'sumaParcial', label: 'T_0 + \\dots + T_k' },
+                            ]
+                          : []),
+                      ]}
+                      onSubmit={validateSteps}
+                      loading={validator.loading}
+                    />
+                    {validator.data && <FeedbackPanel {...validator.data} />}
+                    {validator.error && <p className="text-sm text-rose-700">{validator.error}</p>}
                   </div>
                 ),
               },

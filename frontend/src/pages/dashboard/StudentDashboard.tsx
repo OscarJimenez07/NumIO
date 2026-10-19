@@ -8,6 +8,11 @@ interface Attempt {
   method: { name: string; category: string; slug: string };
 }
 
+const CATEGORIAS: Record<string, string> = {
+  NUMERICAL: 'Análisis Numérico',
+  OPERATIONS: 'Investigación de Operaciones',
+};
+
 export function StudentDashboard() {
   const [attempts, setAttempts] = useState<Attempt[]>([]);
   const [loading, setLoading] = useState(true);
@@ -32,11 +37,14 @@ export function StudentDashboard() {
       </div>
 
       <div className="card">
-        <h2 className="font-semibold mb-3">Historial reciente</h2>
+        <h2 className="font-semibold mb-1">Historial reciente</h2>
+        <p className="text-sm text-slate-500 mb-3">
+          Ejercicios resueltos en modo práctica y validados contra la solución del sistema.
+        </p>
         {loading ? (
           <p className="text-sm text-slate-500">Cargando...</p>
         ) : attempts.length === 0 ? (
-          <p className="text-sm text-slate-500">Aún no has resuelto ningún ejercicio.</p>
+          <p className="text-sm text-slate-500">Aún no has validado ningún ejercicio en modo práctica.</p>
         ) : (
           <table className="table-clean">
             <thead>
@@ -52,7 +60,7 @@ export function StudentDashboard() {
                 <tr key={a.id}>
                   <td>{new Date(a.createdAt).toLocaleString()}</td>
                   <td>{a.method.name}</td>
-                  <td>{a.method.category}</td>
+                  <td>{CATEGORIAS[a.method.category] ?? a.method.category}</td>
                   <td>
                     <span className={`px-2 py-0.5 rounded text-xs ${a.isCorrect ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}`}>
                       {a.isCorrect ? 'Correcto' : 'Con errores'}

@@ -4,7 +4,9 @@ import { Tabs } from '@/components/layout/Tabs';
 import { StepPlayer } from '@/components/math/StepPlayer';
 import { KaTeXBlock } from '@/components/math/KaTeXBlock';
 import { MathText } from '@/components/math/MathText';
-import { saveAttempt, useSolver } from '@/hooks/useSolver';
+import { FeedbackPanel } from '@/components/feedback/FeedbackPanel';
+import { StepInputForm } from '@/components/feedback/StepInputForm';
+import { saveAttempt, useSolver, useValidator } from '@/hooks/useSolver';
 import { NumberInput } from '@/components/math/NumberInput';
 
 /** Suma ignorando los campos que están vacíos mientras se editan. */
@@ -23,6 +25,7 @@ export function TransportationPage() {
   const [stepIdx, setStepIdx] = useState(0);
 
   const { data, loading, error, solve } = useSolver('/operations/transportation');
+  const validator = useValidator('/operations/transportation');
 
   const resize = (newM: number, newN: number) => {
   // Mientras el campo está vacío o fuera de rango se conserva la matriz actual.
@@ -46,9 +49,18 @@ export function TransportationPage() {
     const r = await solve({ costs, supply, demand });
     if (r) {
       setStepIdx(0);
-      saveAttempt({ methodSlug: 'transportation', input: { costs, supply, demand }, steps: r.steps, isCorrect: true });
     }
   };
+
+  const validateSteps = async (userSteps: any[]) => {
+    const r = await validator.validate({ costs, supply, demand, userSteps });
+    if (r) {
+      saveAttempt({ methodSlug: 'transportation', input: { costs, supply, demand }, steps: data?.steps ?? [], userSteps, feedback: r.feedback, isCorrect: r.isCorrect });
+    }
+  };
+
+  // Las asignaciones de Vogel son los primeros pasos (los que tienen cantidad).
+  const asignacionesVogel = data ? data.steps.filter((s) => s.state.quantity !== undefined).length : 0;
 
   return (
     <div>
@@ -197,6 +209,29 @@ export function TransportationPage() {
                         ))}
                       </tbody>
                     </table>
+                  </div>
+                ),
+              },
+              {
+                id: 'practice',
+                label: 'Practicar',
+                content: (
+                  <div className="space-y-4">
+                    <StepInputForm
+                      key={data.steps.length}
+                      numIterations={asignacionesVogel}
+                      description="Construye la solución inicial por aproximación de Vogel: en cada asignación ingresa la celda elegida (número de fuente F y de destino D), la cantidad enviada y el costo total acumulado hasta ese paso (en la última fila, el costo de la solución inicial)."
+                      fields={[
+                        { key: 'fila', label: '\\text{Fuente } F_i' },
+                        { key: 'columna', label: '\\text{Destino } D_j' },
+                        { key: 'cantidad', label: 'x_{ij}' },
+                        { key: 'costoAcumulado', label: '\\text{Costo acumulado}' },
+                      ]}
+                      onSubmit={validateSteps}
+                      loading={validator.loading}
+                    />
+                    {validator.data && <FeedbackPanel {...validator.data} />}
+                    {validator.error && <p className="text-sm text-rose-700">{validator.error}</p>}
                   </div>
                 ),
               },

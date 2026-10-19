@@ -64,9 +64,9 @@ export function ResultsDashboard() {
           <button
             className="btn-secondary text-xs"
             onClick={() => exportCsv(data.tests, 'pre-post-test.csv', (r) => ({
+              // El archivo de análisis va seudonimizado: código en lugar de nombre y correo.
               fecha: r.createdAt,
-              estudiante: r.user?.fullName ?? '',
-              email: r.user?.email ?? '',
+              participante: codigoParticipante(r.userId),
               tipo: r.testType,
               score: r.score,
             }))}
@@ -98,7 +98,7 @@ export function ResultsDashboard() {
             className="btn-secondary text-xs"
             onClick={() => exportCsv(data.sus, 'sus.csv', (r) => ({
               fecha: r.createdAt,
-              estudiante: r.user?.fullName ?? '',
+              participante: codigoParticipante(r.userId),
               score: r.score,
               respuestas: JSON.stringify(r.answers),
             }))}
@@ -133,4 +133,10 @@ function Stat({ label, value, sub }: { label: string; value: any; sub?: string }
       {sub && <p className="text-xs text-slate-500 mt-1">{sub}</p>}
     </div>
   );
+}
+
+/** Código estable por estudiante (P-xxxxxxxx) para exportar sin datos personales. */
+function codigoParticipante(userId: string): string {
+  // Los cuid comparten el prefijo de la fecha de creación; el final es aleatorio.
+  return 'P-' + (userId ?? '').slice(-8).toUpperCase();
 }

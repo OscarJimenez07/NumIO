@@ -25,7 +25,6 @@ export function BisectionPage() {
     const r = await solve({ fn, a, b, tolerance: tol });
     if (r) {
       setStepIdx(0);
-      saveAttempt({ methodSlug: 'bisection', input: { fn, a, b, tolerance: tol }, steps: r.steps, isCorrect: r.result.converged });
     }
   };
 

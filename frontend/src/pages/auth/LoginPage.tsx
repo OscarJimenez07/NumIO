@@ -63,14 +63,19 @@ export function LoginPage() {
                 <form onSubmit={submit} className="space-y-4">
                   {error && <div className="text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded p-2">{error}</div>}
                   <div>
-                    <label className="label">Correo</label>
+                    <label className="label" htmlFor="ingreso-usuario">Correo o usuario</label>
+                    {/* Basta el usuario (lo que va antes de la @); el servidor completa el resto. */}
                     <input
+                      id="ingreso-usuario"
                       className="input"
-                      type="email"
+                      type="text"
                       required
+                      autoComplete="username"
+                      autoCapitalize="none"
+                      spellCheck={false}
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      placeholder="usuario@uts.edu.co"
+                      placeholder="usuario o usuario@uts.edu.co"
                     />
                   </div>
                   <div>

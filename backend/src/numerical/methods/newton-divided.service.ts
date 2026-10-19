@@ -147,8 +147,29 @@ export class NewtonDividedService {
     return 'P(x) = ' + texto;
   }
 
+  /**
+   * Modo práctica: una fila por coeficiente b_k = f[x_0, …, x_k]. Si se pidió
+   * evaluar, la fila también lleva el término T_k = b_k·(x − x_0)…(x − x_{k−1})
+   * y la suma parcial T_0 + … + T_k (la última fila es P(x)). Los pasos de
+   * solve() guardan columnas completas (vectores), que no caben en el
+   * formulario de práctica, así que se comparan los valores que el estudiante
+   * anota en el cuaderno.
+   */
   validate(input: InterpolationInputDto, userSteps: Step[]): FeedbackResult {
-    const expected = this.solve(input).steps;
+    const { result, steps } = this.solve(input);
+    const coefs = result.coefficients as number[];
+    const pasoEval = input.evalAt !== undefined ? steps[steps.length - 1] : undefined;
+    let suma = 0;
+    const expected: Step[] = coefs.map((b, k) => {
+      const state: Step['state'] = { coeficiente: b };
+      if (pasoEval) {
+        const termino = pasoEval.state[`termino${k}`] as number;
+        suma += termino;
+        state.termino = termino;
+        state.sumaParcial = round(suma);
+      }
+      return { iteration: k, state };
+    });
     return this.feedback.compare(expected, userSteps);
   }
 }

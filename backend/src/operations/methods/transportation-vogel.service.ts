@@ -41,7 +41,7 @@ export class TransportationVogelService {
       // Calcular penalizaciones por fila y columna (diferencia entre los 2 menores)
       const rowPenalty: number[] = Array(m).fill(-1);
       const colPenalty: number[] = Array(n).fill(-1);
-      // La cuenta de cada penalización, para mostrarlas todas: P(O1) = 10 - 2 = 8.
+      // La cuenta de cada penalización, para mostrarlas todas: P(F1) = 10 - 2 = 8.
       const cuentasPen: Array<[string, string]> = [];
       const cuentaPen = (vals: number[], pen: number) =>
         vals.length === 1 ? `${round(vals[0])} \\;\\text{(un solo costo)}` : `${round(vals[1])} - ${paren(vals[0])} = ${round(pen)}`;
@@ -53,7 +53,7 @@ export class TransportationVogelService {
         if (vals.length === 0) continue;
         vals.sort((a, b) => a - b);
         rowPenalty[i] = vals.length === 1 ? vals[0] : vals[1] - vals[0];
-        cuentasPen.push([`P(O_{${i + 1}})`, cuentaPen(vals, rowPenalty[i])]);
+        cuentasPen.push([`P(F_{${i + 1}})`, cuentaPen(vals, rowPenalty[i])]);
       }
       for (let j = 0; j < n; j++) {
         if (colDone[j]) continue;
@@ -112,7 +112,7 @@ export class TransportationVogelService {
         ? costs[idx].filter((_, j) => !colDone[j])
         : costs.map((r) => r[idx]).filter((_, i) => !rowDone[i]);
       const [bajo1, bajo2] = [...linea].sort((a, b) => a - b);
-      const nombreLinea = isRow ? `la fila O${idx + 1}` : `la columna D${idx + 1}`;
+      const nombreLinea = isRow ? `la fila F${idx + 1}` : `la columna D${idx + 1}`;
       const origenPen =
         bajo2 === undefined
           ? `solo le queda un costo disponible, ${fmt(bajo1)}`
@@ -141,20 +141,20 @@ export class TransportationVogelService {
         explanation:
           `La penalización de cada fila y columna es la diferencia entre sus dos costos más bajos ` +
           `(lo que se pierde si no se usa la ruta más barata). La mayor es ${fmt(maxPen)}, en ${nombreLinea}: ${origenPen}. ` +
-          `Ahí la ruta más barata es O${pickI + 1} → D${pickJ + 1}, con costo ${fmt(costs[pickI][pickJ])}. ` +
+          `Ahí la ruta más barata es F${pickI + 1} → D${pickJ + 1}, con costo ${fmt(costs[pickI][pickJ])}. ` +
           `Se envía lo máximo posible: el menor entre la oferta que queda (${fmt(ofertaAntes)}) y la demanda que falta (${fmt(demandaAntes)}), ` +
           `es decir ${fmt(qty)} unidades, que cuestan ${fmt(qty)} × ${fmt(costs[pickI][pickJ])} = ${fmt(qty * costs[pickI][pickJ])}.`,
         // Todas las penalizaciones (tres por renglón), luego la asignación con
         // su costo y lo que queda de oferta y demanda.
         latex: rejilla([
           ...trios(cuentasPen),
-          [[`\\text{Mayor penalización}`, `${round(maxPen)} \\;\\text{en } ${isRow ? `O_{${idx + 1}}` : `D_{${idx + 1}}`} \\;\\Rightarrow\\; \\text{ruta más barata } O_{${pickI + 1}} \\to D_{${pickJ + 1}}`]],
+          [[`\\text{Mayor penalización}`, `${round(maxPen)} \\;\\text{en } ${isRow ? `F_{${idx + 1}}` : `D_{${idx + 1}}`} \\;\\Rightarrow\\; \\text{ruta más barata } F_{${pickI + 1}} \\to D_{${pickJ + 1}}`]],
           [
             [`x_{${pickI + 1}${pickJ + 1}}`, `\\min(${ofertaAntes}, ${demandaAntes}) = ${qty}`],
             [`\\text{Costo}`, `${qty} \\times ${costs[pickI][pickJ]} = ${round(qty * costs[pickI][pickJ])}`],
           ],
           [
-            [`\\text{Oferta } O_{${pickI + 1}}`, `${ofertaAntes} - ${qty} = ${s[pickI]}`],
+            [`\\text{Oferta } F_{${pickI + 1}}`, `${ofertaAntes} - ${qty} = ${s[pickI]}`],
             [`\\text{Demanda } D_{${pickJ + 1}}`, `${demandaAntes} - ${qty} = ${d[pickJ]}`],
           ],
         ]),

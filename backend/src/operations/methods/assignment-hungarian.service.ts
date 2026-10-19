@@ -171,6 +171,10 @@ export class AssignmentHungarianService {
         assignment: assignment.map(([i, j]) => ({ task: i + 1, resource: j + 1 })),
         totalCost: round(total),
         n,
+        // Lo que se restó a cada fila (paso 1) y a cada columna (paso 2); las
+        // filas ficticias de relleno (todo M) cuentan como 0.
+        rowReductions: minFilas.map((v) => (v < M ? round(v) : 0)),
+        colReductions: minColumnas.map((v) => round(v)),
       },
       steps,
     };
@@ -254,8 +258,45 @@ export class AssignmentHungarianService {
     return result;
   }
 
+  /**
+   * Modo práctica: una fila por tarea T_i con el mínimo restado a la fila T_i
+   * (paso 1), el restado a la columna R_i (paso 2), el recurso asignado a T_i
+   * y el costo total acumulado hasta T_i (en la última fila, el costo óptimo).
+   * Si hay varias asignaciones óptimas, se acepta la del estudiante cuando es
+   * una permutación completa con el mismo costo total que la de referencia.
+   */
   validate(input: AssignmentInputDto, userSteps: Step[]): FeedbackResult {
-    const expected = this.solve(input).steps;
+    const { result } = this.solve(input);
+    const n = result.n as number;
+    const original = input.costs;
+    const costo = (i: number, j: number) => (j >= 0 && j < (original[i]?.length ?? 0) ? original[i][j] : 0);
+
+    const recursos: number[] = Array(n).fill(0);
+    for (const a of result.assignment as Array<{ task: number; resource: number }>) recursos[a.task - 1] = a.resource;
+
+    const delUsuario = (userSteps ?? []).map((s) => Number(s.state?.recurso));
+    const esPermutacion =
+      delUsuario.length === n &&
+      new Set(delUsuario).size === n &&
+      delUsuario.every((r) => Number.isInteger(r) && r >= 1 && r <= n);
+    if (esPermutacion) {
+      const total = delUsuario.reduce((acc, r, i) => acc + costo(i, r - 1), 0);
+      if (Math.abs(total - (result.totalCost as number)) < 1e-6) delUsuario.forEach((r, i) => (recursos[i] = r));
+    }
+
+    let acumulado = 0;
+    const expected: Step[] = recursos.map((r, i) => {
+      acumulado += costo(i, r - 1);
+      return {
+        iteration: i + 1,
+        state: {
+          minFila: (result.rowReductions as number[])[i],
+          minColumna: (result.colReductions as number[])[i],
+          recurso: r,
+          costoAcumulado: round(acumulado),
+        },
+      };
+    });
     return this.feedback.compare(expected, userSteps);
   }
 }

@@ -5,11 +5,9 @@ export class TestResultDto {
   @IsEnum(TestType)
   testType!: TestType;
 
-  @IsNumber()
-  score!: number;
-
+  // { q1: índice de la opción elegida, ... }. El puntaje lo calcula el servidor.
   @IsObject()
-  details!: any;
+  answers!: Record<string, number>;
 }
 
 export class SusResponseDto {
